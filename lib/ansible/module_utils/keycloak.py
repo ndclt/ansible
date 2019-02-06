@@ -44,6 +44,8 @@ URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
 
+URL_USERS = "{url}/admin/realms/{realm}/users"
+
 
 def keycloak_argument_spec():
     """
@@ -80,6 +82,7 @@ class KeycloakAPI(object):
         """
         self.baseurl = self.module.params.get('auth_keycloak_url')
         self.validate_certs = self.module.params.get('validate_certs')
+        self.module.log('test logging')
 
         auth_url = URL_TOKEN.format(url=self.baseurl, realm=self.module.params.get('auth_realm'))
 
@@ -339,3 +342,25 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(msg='Could not delete client template %s in realm %s: %s'
                                       % (id, realm, str(e)))
+
+    def get_users(self, realm='master', filter=None):
+        """ Obtains client representations for clients in a realm
+
+        :param realm: realm to be queried
+        :param filter: if defined, only the user with userid specified in the filter is returned
+        :return: list of dicts of users representations
+        """
+        userlist_url = URL_USERS.format(url=self.baseurl, realm=realm)
+        if filter is not None:
+            userlist_url += '?userId=%s' % filter
+
+        try:
+            user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders,
+                                      validate_certs=self.validate_certs))
+            return user_json
+        except ValueError as e:
+            self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
+                                      % (realm, str(e)))
+        except Exception as e:
+            self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
+                                      % (realm, str(e)))
