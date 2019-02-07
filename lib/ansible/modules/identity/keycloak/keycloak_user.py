@@ -81,6 +81,7 @@ def sanitize_user_representation(user_representation):
                 result['credentials'][credential_key] = 'no_log'
     return result
 
+
 def run_module():
     argument_spec = keycloak_argument_spec()
     meta_args = dict(
