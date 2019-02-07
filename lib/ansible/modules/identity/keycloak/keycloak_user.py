@@ -72,7 +72,9 @@ def run_module():
     meta_args = dict(
         state=dict(default='present', choices=['present', 'absent']),
         realm=dict(default='master'),
+
         name=dict(type='str'),
+        id=dict(type='str')
     )
 
     argument_spec.update(meta_args)
