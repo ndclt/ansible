@@ -45,6 +45,7 @@ URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
 
 URL_USERS = "{url}/admin/realms/{realm}/users"
+URL_USER = "{url}/admin/realms/{realm}/users/{id}"
 
 
 def keycloak_argument_spec():
@@ -364,3 +365,52 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
                                       % (realm, str(e)))
+
+    def get_user_by_id(self, id, realm='master'):
+        """ Obtain client template representation by id
+
+                :param id: id (not name) of client template to be queried
+                :param realm: client template from this realm
+                :return: dict of client template representation or None if none matching exist
+                """
+        url = URL_USER.format(url=self.baseurl, id=id, realm=realm)
+
+        try:
+            return json.load(
+                open_url(url, method='GET', headers=self.restheaders, validate_certs=self.validate_certs))
+        except ValueError as e:
+            self.module.fail_json(
+                msg='API returned incorrect JSON when trying to obtain client templates %s for realm %s: %s'
+                    % (id, realm, str(e)))
+        except Exception as e:
+            self.module.fail_json(
+                msg='Could not obtain client template %s for realm %s: %s'
+                    % (id, realm, str(e)))
+
+    def get_user_id(self, name, realm='master'):
+        """ Obtain user id by name
+
+        :param name: name of user to be queried
+        :param realm: client template from this realm
+        :return: user id (usually a UUID)
+        """
+        result = self.get_user_by_name(name, realm)
+        if isinstance(result, dict) and 'id' in result:
+            return result['id']
+        else:
+            return None
+        
+    def get_user_by_name(self, name, realm='master'):
+        """ Obtain user representation by name
+
+        :param name: name of user to be queried
+        :param realm: user from this realm
+        :return: dict of user representation or None if none matching exist
+        """
+        result = self.get_users(realm)
+        if isinstance(result, list):
+            result = [x for x in result if x['username'] == name]
+            if len(result) > 0:
+                return result[0]
+        return None
+

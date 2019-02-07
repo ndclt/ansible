@@ -80,10 +80,47 @@ def run_module():
     argument_spec.update(meta_args)
 
     module = AnsibleModule(argument_spec=argument_spec,
-                           supports_check_mode=True)
+                           supports_check_mode=True,
+                           required_one_of=([['name', 'id']]))
+    result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
+
+    user_name = module.params.get('name')
+    realm = module.params.get('realm')
+    state = module.params.get('state')
+
+    user_params = [
+        x for x in module.params
+        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
+        module.params.get(x) is not None]
+
     kc = KeycloakAPI(module)
-    result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
-                  end_state={})
+    if user_name is None:
+        asked_id = module.params.get('id')
+        before_client = kc.get_user_by_id(asked_id, realm=realm)
+    else:
+        before_client = kc.get_user_by_name(user_name, realm=realm)
+    if before_client is None:
+        before_client = dict()
+
+    changeset = dict()
+    for user_param in user_params:
+        new_param_value = module.params.get(user_param)
+
+        # some lists in the Keycloak API are sorted, some are not.
+        if isinstance(new_param_value, list):
+            if user_param in ['attributes']:
+                try:
+                    new_param_value = sorted(new_param_value)
+                except TypeError:
+                    pass
+
+        changeset[camel(user_param)] = new_param_value
+
+    updated_client = before_client.copy()
+    updated_client.update(changeset)
+
+    result['proposed'] = changeset
+    result['existing'] = before_client
 
     if module.check_mode:
         return result
