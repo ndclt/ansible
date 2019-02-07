@@ -72,6 +72,7 @@ def run_module():
     meta_args = dict(
         state=dict(default='present', choices=['present', 'absent']),
         realm=dict(default='master'),
+        name=dict(type='str'),
     )
 
     argument_spec.update(meta_args)
@@ -81,7 +82,6 @@ def run_module():
     kc = KeycloakAPI(module)
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
                   end_state={})
-    kc.get_users()
 
     if module.check_mode:
         return result
