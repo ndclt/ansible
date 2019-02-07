@@ -380,11 +380,11 @@ class KeycloakAPI(object):
                 open_url(url, method='GET', headers=self.restheaders, validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(
-                msg='API returned incorrect JSON when trying to obtain client templates %s for realm %s: %s'
+                msg='API returned incorrect JSON when trying to obtain user %s for realm %s: %s'
                     % (id, realm, str(e)))
         except Exception as e:
             self.module.fail_json(
-                msg='Could not obtain client template %s for realm %s: %s'
+                msg='Could not obtain user template %s for realm %s: %s'
                     % (id, realm, str(e)))
 
     def get_user_id(self, name, realm='master'):
@@ -426,7 +426,7 @@ class KeycloakAPI(object):
             return open_url(user_url, method='POST', headers=self.restheaders,
                             data=json.dumps(user_representation), validate_certs=self.validate_certs)
         except Exception as e:
-            self.module.fail_json(msg='Could not create client %s in realm %s: %s'
+            self.module.fail_json(msg='Could not create user %s in realm %s: %s'
                                       % (user_representation['clientId'], realm, str(e)))
             
     def update_user(self, user_representation, realm="master"):
