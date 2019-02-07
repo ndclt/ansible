@@ -87,7 +87,7 @@ def run_module():
         state=dict(default='present', choices=['present', 'absent']),
         realm=dict(default='master'),
 
-        name=dict(type='str'),
+        user_name=dict(type='str'),
         id=dict(type='str')
     )
 
@@ -95,7 +95,7 @@ def run_module():
 
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
-                           required_one_of=([['name', 'id']]))
+                           required_one_of=([['user_name', 'id']]))
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
     user_name = module.params.get('name')
