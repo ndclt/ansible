@@ -67,6 +67,20 @@ from ansible.module_utils.keycloak import KeycloakAPI, camel, keycloak_argument_
 from ansible.module_utils.basic import AnsibleModule
 
 
+def sanitize_user_representation(user_representation):
+    """ Removes probably sensitive details from a user representation
+
+    :param userrep: the userrep dict to be sanitized
+    :return: sanitized userrep dict
+    """
+    result = user_representation.copy()
+    if 'credentials' in result:
+        # check if this value are to sanitize
+        for credential_key in ['hashedSaltedValue', 'salt']:
+            if credential_key in result['credentials']:
+                result['credentials'][credential_key] = 'no_log'
+    return result
+
 def run_module():
     argument_spec = keycloak_argument_spec()
     meta_args = dict(
@@ -96,11 +110,11 @@ def run_module():
     kc = KeycloakAPI(module)
     if user_name is None:
         asked_id = module.params.get('id')
-        before_client = kc.get_user_by_id(asked_id, realm=realm)
+        before_user = kc.get_user_by_id(asked_id, realm=realm)
     else:
-        before_client = kc.get_user_by_name(user_name, realm=realm)
-    if before_client is None:
-        before_client = dict()
+        before_user = kc.get_user_by_name(user_name, realm=realm)
+    if before_user is None:
+        before_user = dict()
 
     changeset = dict()
     for user_param in user_params:
@@ -116,34 +130,86 @@ def run_module():
 
         changeset[camel(user_param)] = new_param_value
 
-    updated_client = before_client.copy()
-    updated_client.update(changeset)
+    updated_user = before_user.copy()
+    updated_user.update(changeset)
 
     result['proposed'] = changeset
-    result['existing'] = before_client
+    result['existing'] = before_user
 
-    if module.check_mode:
-        return result
+    # If the user does not exist yet, before_user is still empty
+    if before_user == dict():
+        if state == 'absent':
+            # do nothing and exit
+            if module._diff:
+                result['diff'] = dict(before='', after='')
+            result['msg'] = 'User does not exist, doing nothing.'
+            module.exit_json(**result)
 
-    # manipulate or modify the state as needed (this is going to be the
-    # part where your module will do what it needs to do)
-    #result['original_message'] = module.params['name']
-    #result['message'] = 'goodbye'
+        # create new user
+        result['changed'] = True
+        if 'userId' not in updated_user:
+            module.fail_json(
+                msg='User id needs to be specified when creating a new user')
 
-    # use whatever logic you need to determine whether or not this module
-    # made any modifications to your target
-    #if module.params['new']:
-    #    result['changed'] = True
+        if module._diff:
+            result['diff'] = dict(before='',
+                                  after=sanitize_user_representation(updated_user))
 
-    # during the execution of the module, if there is an exception or a
-    # conditional state that effectively causes a failure, run
-    # AnsibleModule.fail_json() to pass in the message and the result
-    #if module.params['name'] == 'fail me':
-    #    module.fail_json(msg='You requested this to fail', **result)
+        if module.check_mode:
+            module.exit_json(**result)
 
-    # in the event of a successful module execution, you will want to
-    # simple AnsibleModule.exit_json(), passing the key/value results
-    module.exit_json(**result)
+        kc.create_user(updated_user, realm=realm)
+        after_user = kc.get_user_by_id(
+            updated_user['userId'], realm=realm)
+
+        result['end_state'] = sanitize_user_representation(after_user)
+
+        result['msg'] = 'user %s has been created.' % updated_user[
+            'userId']
+        module.exit_json(**result)
+    else:
+        if state == 'present':
+            # update existing user
+            result['changed'] = True
+            if module.check_mode:
+                # We can only compare the current user with the proposed updates we have
+                if module._diff:
+                    result['diff'] = dict(
+                        before=sanitize_user_representation(before_user),
+                        after=sanitize_user_representation(updated_user))
+                result['changed'] = (before_user != updated_user)
+
+                module.exit_json(**result)
+
+            kc.update_user(asked_id, updated_user, realm=realm)
+
+            after_user = kc.get_user_by_id(asked_id, realm=realm)
+            if before_user == after_user:
+                result['changed'] = False
+            if module._diff:
+                result['diff'] = dict(before=sanitize_user_representation(before_user),
+                                      after=sanitize_user_representation(after_user))
+            result['end_state'] = sanitize_user_representation(after_user)
+
+            result['msg'] = 'user %s has been updated.' % updated_user[
+                'userId']
+            module.exit_json(**result)
+        else:
+            # Delete existing user
+            result['changed'] = True
+            if module._diff:
+                result['diff']['before'] = sanitize_user_representation(before_user)
+                result['diff']['after'] = ''
+
+            if module.check_mode:
+                module.exit_json(**result)
+
+            kc.delete_user(asked_id, realm=realm)
+            result['proposed'] = dict()
+            result['end_state'] = dict()
+            result['msg'] = 'user %s has been deleted.' % before_user[
+                'userId']
+            module.exit_json(**result)
 
 
 def main():

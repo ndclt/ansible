@@ -37,7 +37,7 @@ from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 URL_TOKEN = "{url}/realms/{realm}/protocol/openid-connect/token"
 URL_CLIENT = "{url}/admin/realms/{realm}/clients/{id}"
-URL_CLIENTS = "{url}/admin/realms/{realm}/clients"
+URL_USERS = "{url}/admin/realms/{realm}/clients"
 URL_CLIENT_ROLES = "{url}/admin/realms/{realm}/clients/{id}/roles"
 URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
 
@@ -121,7 +121,7 @@ class KeycloakAPI(object):
         :param filter: if defined, only the client with clientId specified in the filter is returned
         :return: list of dicts of client representations
         """
-        clientlist_url = URL_CLIENTS.format(url=self.baseurl, realm=realm)
+        clientlist_url = URL_USERS.format(url=self.baseurl, realm=realm)
         if filter is not None:
             clientlist_url += '?clientId=%s' % filter
 
@@ -208,7 +208,7 @@ class KeycloakAPI(object):
         :param realm: realm for client to be created
         :return: HTTPResponse object on success
         """
-        client_url = URL_CLIENTS.format(url=self.baseurl, realm=realm)
+        client_url = URL_USERS.format(url=self.baseurl, realm=realm)
 
         try:
             return open_url(client_url, method='POST', headers=self.restheaders,
@@ -413,4 +413,52 @@ class KeycloakAPI(object):
             if len(result) > 0:
                 return result[0]
         return None
+    
+    def create_user(self, user_representation, realm="master"):
+        """ Create a user in keycloak
+        :param user_representation: user representation of user to be created. Must at least contain field userId
+        :param realm: realm for user to be created
+        :return: HTTPResponse object on success
+        """
+        user_url = URL_USERS.format(url=self.baseurl, realm=realm)
+
+        try:
+            return open_url(user_url, method='POST', headers=self.restheaders,
+                            data=json.dumps(user_representation), validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(msg='Could not create client %s in realm %s: %s'
+                                      % (user_representation['clientId'], realm, str(e)))
+            
+    def update_user(self, user_representation, realm="master"):
+        """ Update an existing user
+        :param id: id (not userId) of user to be updated in Keycloak
+        :param user_representation: corresponding (partial/full) user representation with updates
+        :param realm: realm the user is in
+        :return: HTTPResponse object on success
+        """
+        user_url = URL_USER.format(url=self.baseurl, realm=realm, id=id)
+
+        try:
+            return open_url(user_url, method='PUT', headers=self.restheaders,
+                            data=json.dumps(user_representation),
+                            validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(msg='Could not update user %s in realm %s: %s' 
+                                      % (id, realm, str(e)))
+            
+    def delete_user(self, id, realm="master"):
+        """ Delete a user from Keycloak
+
+        :param id: id (not userId) of user to be deleted
+        :param realm: realm of user to be deleted
+        :return: HTTPResponse object on success
+        """
+        user_url = URL_USER.format(url=self.baseurl, realm=realm, id=id)
+
+        try:
+            return open_url(user_url, method='DELETE', headers=self.restheaders,
+                            validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(msg='Could not delete user %s in realm %s: %s'
+                                      % (id, realm, str(e)))
 
