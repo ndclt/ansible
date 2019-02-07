@@ -181,7 +181,7 @@ def run_module():
 
                 module.exit_json(**result)
 
-            kc.update_user(asked_id, updated_user, realm=realm)
+            kc.update_user(updated_user, realm=realm)
 
             after_user = kc.get_user_by_id(asked_id, realm=realm)
             if before_user == after_user:
