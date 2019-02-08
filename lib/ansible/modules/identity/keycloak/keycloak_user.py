@@ -88,19 +88,19 @@ def run_module():
         state=dict(default='present', choices=['present', 'absent']),
         realm=dict(default='master'),
 
-        user_name=dict(type='str'),
-        id=dict(type='str')
+        keycloak_user=dict(type='str'),
+        id=dict(type='str'),
     )
 
     argument_spec.update(meta_args)
 
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
-                           required_one_of=([['user_name', 'id']]),
+                           required_one_of=([['keycloak_user', 'id']]),
                            )
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
-    user_name = module.params.get('name')
+    user_name = module.params.get('keycloak_user')
     realm = module.params.get('realm')
     state = module.params.get('state')
 
@@ -149,9 +149,14 @@ def run_module():
 
         # create new user
         result['changed'] = True
-        if 'userName' not in updated_user:
+        if 'keycloakUsername' not in updated_user:
             module.fail_json(
-                msg='User name needs to be specified when creating a new user')
+                msg='User name needs to be specified when creating a new user',
+                updated_user=updated_user
+            )
+        else:
+            updated_user.update({'username': updated_user['keycloakUsername']})
+            updated_user.pop('keycloakUsername')
 
         if module._diff:
             result['diff'] = dict(before='',
@@ -166,7 +171,7 @@ def run_module():
 
         result['end_state'] = sanitize_user_representation(after_user)
 
-        result['msg'] = 'user %s has been created.' % updated_user['userName']
+        result['msg'] = 'user %s has been created.' % updated_user['username']
         module.exit_json(**result)
     else:
         if state == 'present':
