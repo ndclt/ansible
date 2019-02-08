@@ -433,7 +433,7 @@ class KeycloakAPI(object):
                             data=json.dumps(user_representation), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create user %s in realm %s: %s'
-                                      % (user_representation['clientId'], realm, str(e)))
+                                      % (user_representation['userName'], realm, str(e)))
             
     def update_user(self, user_representation, realm="master"):
         """ Update an existing user

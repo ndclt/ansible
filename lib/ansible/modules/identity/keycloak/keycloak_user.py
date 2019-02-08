@@ -96,7 +96,8 @@ def run_module():
 
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
-                           required_one_of=([['user_name', 'id']]))
+                           required_one_of=([['user_name', 'id']]),
+                           )
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
     user_name = module.params.get('name')
@@ -148,9 +149,9 @@ def run_module():
 
         # create new user
         result['changed'] = True
-        if 'userId' not in updated_user:
+        if 'userName' not in updated_user:
             module.fail_json(
-                msg='User id needs to be specified when creating a new user')
+                msg='User name needs to be specified when creating a new user')
 
         if module._diff:
             result['diff'] = dict(before='',
@@ -165,8 +166,7 @@ def run_module():
 
         result['end_state'] = sanitize_user_representation(after_user)
 
-        result['msg'] = 'user %s has been created.' % updated_user[
-            'userId']
+        result['msg'] = 'user %s has been created.' % updated_user['userName']
         module.exit_json(**result)
     else:
         if state == 'present':
