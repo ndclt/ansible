@@ -95,7 +95,6 @@ class KeycloakAPI(object):
 
         # Remove empty items, for instance missing client_secret
         payload = dict((k, v) for k, v in payload.items() if v is not None)
-
         try:
             r = json.load(open_url(auth_url, method='POST',
                                    validate_certs=self.validate_certs, data=urlencode(payload)))
@@ -104,7 +103,8 @@ class KeycloakAPI(object):
                                       % (auth_url, str(e)))
         except Exception as e:
             self.module.fail_json(msg='Could not obtain access token from %s: %s'
-                                      % (auth_url, str(e)))
+                                      % (auth_url, str(e)),
+                                  payload=payload)
 
         if 'access_token' in r:
             self.token = r['access_token']
@@ -433,7 +433,8 @@ class KeycloakAPI(object):
                             data=json.dumps(user_representation), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create user %s in realm %s: %s'
-                                      % (user_representation['userName'], realm, str(e)))
+                                      % (user_representation['userName'], realm, str(e)),
+                                  payload=user_representation)
             
     def update_user(self, user_representation, realm="master"):
         """ Update an existing user
