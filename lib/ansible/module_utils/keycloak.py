@@ -378,13 +378,19 @@ class KeycloakAPI(object):
         try:
             return json.load(
                 open_url(url, method='GET', headers=self.restheaders, validate_certs=self.validate_certs))
+        except HTTPError as e:
+            if e.code == 404:
+                return None
+            else:
+                self.module.fail_json(msg='Could not obtain user %s for realm %s: %s'
+                                          % (id, realm, str(e)))
         except ValueError as e:
             self.module.fail_json(
                 msg='API returned incorrect JSON when trying to obtain user %s for realm %s: %s'
                     % (id, realm, str(e)))
         except Exception as e:
             self.module.fail_json(
-                msg='Could not obtain user template %s for realm %s: %s'
+                msg='Could not obtain user %s for realm %s: %s'
                     % (id, realm, str(e)))
 
     def get_user_id(self, name, realm='master'):
