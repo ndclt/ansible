@@ -158,14 +158,6 @@ def run_module():
 
         # create new user
         result['changed'] = True
-        if 'keycloakUsername' not in updated_user:
-            module.fail_json(
-                msg='User name needs to be specified when creating a new user',
-                updated_user=updated_user
-            )
-        else:
-            updated_user.update({'username': updated_user['keycloakUsername']})
-            updated_user.pop('keycloakUsername')
 
         if module._diff:
             result['diff'] = dict(before='',
@@ -195,10 +187,11 @@ def run_module():
 
                 module.exit_json(**result)
 
-            kc.update_user(updated_user, realm=realm)
+
 
             asked_id = kc.get_user_id(updated_user['username'], realm=realm)
             after_user = kc.get_user_by_id(asked_id, realm=realm)
+            kc.update_user(asked_id, updated_user, realm=realm)
             if before_user == after_user:
                 result['changed'] = False
             if module._diff:

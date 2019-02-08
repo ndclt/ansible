@@ -422,10 +422,21 @@ class KeycloakAPI(object):
     
     def create_user(self, user_representation, realm="master"):
         """ Create a user in keycloak
+
         :param user_representation: user representation of user to be created. Must at least contain field userId
         :param realm: realm for user to be created
         :return: HTTPResponse object on success
         """
+        # Keycloak wait username as key for the keycloak user username.
+        try:
+            user_name = user_representation.pop('keycloakUsername')
+        except KeyError:
+            self.module.fail_json(
+                msg='User name needs to be specified when creating a new user',
+                user_representation=user_representation
+            )
+        else:
+            user_representation.update({'username': user_name})
         user_url = URL_USERS.format(url=self.baseurl, realm=realm)
 
         try:
@@ -436,14 +447,22 @@ class KeycloakAPI(object):
                                       % (user_representation['userName'], realm, str(e)),
                                   payload=user_representation)
             
-    def update_user(self, user_representation, realm="master"):
+    def update_user(self, uuid, user_representation, realm="master"):
         """ Update an existing user
-        :param id: id (not userId) of user to be updated in Keycloak
+        :param uuid: id of user to be updated in Keycloak
         :param user_representation: corresponding (partial/full) user representation with updates
         :param realm: realm the user is in
         :return: HTTPResponse object on success
         """
-        user_url = URL_USER.format(url=self.baseurl, realm=realm, id=id)
+        # Keycloak wait username as key for the keycloak user username.
+        try:
+            user_name = user_representation.pop('keycloakUsername')
+        except KeyError:
+            pass
+        else:
+            user_representation.update({'username': user_name})
+
+        user_url = URL_USER.format(url=self.baseurl, realm=realm, id=uuid)
 
         try:
             return open_url(user_url, method='PUT', headers=self.restheaders,
@@ -451,7 +470,8 @@ class KeycloakAPI(object):
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update user %s in realm %s: %s' 
-                                      % (id, realm, str(e)))
+                                      % (uuid, realm, str(e)),
+                                  user_representation=user_representation)
             
     def delete_user(self, id, realm="master"):
         """ Delete a user from Keycloak
