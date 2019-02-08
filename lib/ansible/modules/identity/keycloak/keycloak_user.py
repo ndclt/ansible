@@ -90,6 +90,11 @@ def run_module():
 
         keycloak_user=dict(type='str'),
         id=dict(type='str'),
+
+        email_verified=dict(type='bool', default=False),
+        enabled=dict(type='bool', default=True),
+        attributes=dict(type='dict', default={}),
+        email=dict(type=str)
     )
 
     argument_spec.update(meta_args)
