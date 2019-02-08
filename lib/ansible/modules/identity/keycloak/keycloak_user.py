@@ -109,6 +109,10 @@ def run_module():
     realm = module.params.get('realm')
     state = module.params.get('state')
 
+    given_user_id = module.params.get('keycloak_username')
+    if not given_user_id:
+        given_user_id = module.params.get('id')
+
     user_params = [
         x for x in module.params
         if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
@@ -175,7 +179,7 @@ def run_module():
 
         result['end_state'] = sanitize_user_representation(after_user)
 
-        result['msg'] = 'user %s has been created.' % updated_user['username']
+        result['msg'] = 'user %s has been created.' % given_user_id
         module.exit_json(**result)
     else:
         if state == 'present':
@@ -193,6 +197,7 @@ def run_module():
 
             kc.update_user(updated_user, realm=realm)
 
+            asked_id = kc.get_user_id(updated_user['username'], realm=realm)
             after_user = kc.get_user_by_id(asked_id, realm=realm)
             if before_user == after_user:
                 result['changed'] = False
@@ -201,8 +206,7 @@ def run_module():
                                       after=sanitize_user_representation(after_user))
             result['end_state'] = sanitize_user_representation(after_user)
 
-            result['msg'] = 'user %s has been updated.' % updated_user[
-                'userId']
+            result['msg'] = 'user %s has been updated.' % given_user_id
             module.exit_json(**result)
         else:
             # Delete existing user
@@ -213,12 +217,12 @@ def run_module():
 
             if module.check_mode:
                 module.exit_json(**result)
+            asked_id = kc.get_user_id(updated_user['username'], realm=realm)
 
             kc.delete_user(asked_id, realm=realm)
             result['proposed'] = dict()
             result['end_state'] = dict()
-            result['msg'] = 'user %s has been deleted.' % before_user[
-                'userId']
+            result['msg'] = 'user %s has been deleted.' % given_user_id
             module.exit_json(**result)
 
 
