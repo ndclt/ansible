@@ -11,7 +11,7 @@ ANSIBLE_METADATA = {
 
 DOCUMENTATION = '''
 ---
-module: keycloak_user
+module: keycloak_username
 
 short_description: Allows administration of Keycloak users via Keycloak API 
 
@@ -88,7 +88,7 @@ def run_module():
         state=dict(default='present', choices=['present', 'absent']),
         realm=dict(default='master'),
 
-        keycloak_user=dict(type='str'),
+        keycloak_username=dict(type='str'),
         id=dict(type='str'),
 
         email_verified=dict(type='bool', default=False),
@@ -101,11 +101,11 @@ def run_module():
 
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
-                           required_one_of=([['keycloak_user', 'id']]),
+                           required_one_of=([['keycloak_username', 'id']]),
                            )
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
-    user_name = module.params.get('keycloak_user')
+    user_name = module.params.get('keycloak_username')
     realm = module.params.get('realm')
     state = module.params.get('state')
 
