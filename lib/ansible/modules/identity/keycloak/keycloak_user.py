@@ -166,8 +166,7 @@ def run_module():
             module.exit_json(**result)
 
         kc.create_user(updated_user, realm=realm)
-        after_user = kc.get_user_by_id(
-            updated_user['userId'], realm=realm)
+        after_user = kc.get_user_by_name(updated_user['username'], realm=realm)
 
         result['end_state'] = sanitize_user_representation(after_user)
 
