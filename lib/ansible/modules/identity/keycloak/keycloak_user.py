@@ -113,6 +113,10 @@ def run_module():
     if not given_user_id:
         given_user_id = module.params.get('id')
 
+    new_given_user_id = {'name': module.params.get('keycloak_username')}
+    if not new_given_user_id['name']:
+        new_given_user_id.update({'id': module.params.get('id')})
+
     user_params = [
         x for x in module.params
         if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
@@ -148,6 +152,12 @@ def run_module():
     result['existing'] = before_user
 
     # If the user does not exist yet, before_user is still empty
+    manage_modifications(before_user, new_given_user_id, kc, module, realm, result,
+                         state, updated_user)
+
+
+def manage_modifications(before_user, given_user_id, kc, module, realm, result,
+                         state, updated_user):
     if before_user == dict():
         if state == 'absent':
             # do nothing and exit
@@ -161,12 +171,14 @@ def run_module():
 
         if module._diff:
             result['diff'] = dict(before='',
-                                  after=sanitize_user_representation(updated_user))
+                                  after=sanitize_user_representation(
+                                      updated_user))
 
         if module.check_mode:
             module.exit_json(**result)
 
         kc.create_user(updated_user, realm=realm)
+        # created user can only be known by its username (cannot give an id to keycloak).
         after_user = kc.get_user_by_name(updated_user['username'], realm=realm)
 
         result['end_state'] = sanitize_user_representation(after_user)
@@ -186,17 +198,19 @@ def run_module():
                 result['changed'] = (before_user != updated_user)
 
                 module.exit_json(**result)
+            if given_user_id['name']:
+                asked_id = kc.get_user_id(updated_user['username'], realm=realm)
+            else:
+                asked_id = given_user_id['id']
 
-
-
-            asked_id = kc.get_user_id(updated_user['username'], realm=realm)
-            after_user = kc.get_user_by_id(asked_id, realm=realm)
             kc.update_user(asked_id, updated_user, realm=realm)
+            after_user = kc.get_user_by_id(asked_id, realm=realm)
             if before_user == after_user:
                 result['changed'] = False
             if module._diff:
-                result['diff'] = dict(before=sanitize_user_representation(before_user),
-                                      after=sanitize_user_representation(after_user))
+                result['diff'] = dict(
+                    before=sanitize_user_representation(before_user),
+                    after=sanitize_user_representation(after_user))
             result['end_state'] = sanitize_user_representation(after_user)
 
             result['msg'] = 'user %s has been updated.' % given_user_id
@@ -205,7 +219,8 @@ def run_module():
             # Delete existing user
             result['changed'] = True
             if module._diff:
-                result['diff']['before'] = sanitize_user_representation(before_user)
+                result['diff']['before'] = sanitize_user_representation(
+                    before_user)
                 result['diff']['after'] = ''
 
             if module.check_mode:
