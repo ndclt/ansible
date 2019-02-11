@@ -456,11 +456,9 @@ class KeycloakAPI(object):
         """
         # Keycloak wait username as key for the keycloak user username.
         try:
-            user_name = user_representation.pop('keycloakUsername')
+            user_representation.pop('keycloakUsername')
         except KeyError:
             pass
-        else:
-            user_representation.update({'username': user_name})
 
         user_url = URL_USER.format(url=self.baseurl, realm=realm, id=uuid)
 
@@ -469,9 +467,11 @@ class KeycloakAPI(object):
                             data=json.dumps(user_representation),
                             validate_certs=self.validate_certs)
         except Exception as e:
-            self.module.fail_json(msg='Could not update user %s in realm %s: %s' 
-                                      % (uuid, realm, str(e)),
-                                  user_representation=user_representation)
+            self.module.fail_json(
+                msg='Could not update user %s in realm %s: %s' % (uuid, realm, str(e)),
+                user_representation=user_representation,
+                user_url=user_url
+            )
             
     def delete_user(self, id, realm="master"):
         """ Delete a user from Keycloak
