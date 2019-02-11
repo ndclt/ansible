@@ -56,7 +56,7 @@ def mocked_requests_get(*args, **kwargs):
     return RESPONSE_DICT.get(url, None)
 
 
-def test_nothing_to_do(monkeypatch, open_url_mock):
+def test_state_absent_should_not_create_absent_user(monkeypatch, open_url_mock):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     set_module_args(
