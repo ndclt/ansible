@@ -29,8 +29,69 @@ LIST_USER_RESPONSE_ADMIN_ONLY = r"""[
       "impersonate": true,
       "manage": true
     }
+  },
+  {
+    "id": "883eeb5e-51d0-4aa9-8cb7-667f53e62e90",
+    "createdTimestamp": 1549806949269,
+    "username": "user1",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": true,
+      "view": true,
+      "mapRoles": true,
+      "impersonate": true,
+      "manage": true
+    }
+  },
+  {
+    "id": "994eeb5e-62e1-4bb9-8cb7-667f53e62f01",
+    "createdTimestamp": 1549806949269,
+    "username": "to_delete",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": true,
+      "view": true,
+      "mapRoles": true,
+      "impersonate": true,
+      "manage": true
+    }
   }
 ]"""
+
+TO_DELETE_USER = """{
+    "id": "994eeb5e-62e1-4bb9-8cb7-667f53e62f01",
+    "createdTimestamp": 1549806949269,
+    "username": "to_delete",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": true,
+      "view": true,
+      "mapRoles": true,
+      "impersonate": true,
+      "manage": true
+    }
+  }"""
 
 CREATED_USER_RESPONSE = """{
     "id": "992ddb5e-51d0-4aa9-8cb7-556f53e62e91",
@@ -56,7 +117,7 @@ CREATED_USER_RESPONSE = """{
 
 
 @pytest.fixture
-def url_mock_admin_only(mocker):
+def url_mock_keycloak(mocker):
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
         side_effect=build_mocked_request(RESPONSE_ADMIN_ONLY),
@@ -95,11 +156,15 @@ RESPONSE_ADMIN_ONLY = {
         'POST': CreatedUserMockResponse()
     },
     'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91': create_wrapper(
-        CREATED_USER_RESPONSE)
+        CREATED_USER_RESPONSE),
+    'http://keycloak.url/auth/admin/realms/master/users/994eeb5e-62e1-4bb9-8cb7-667f53e62f01': {
+        'GET': create_wrapper(TO_DELETE_USER),
+        'DELETE': None
+        }
 }
 
 
-def test_state_absent_should_not_create_absent_user(monkeypatch, url_mock_admin_only):
+def test_state_absent_should_not_create_absent_user(monkeypatch, url_mock_keycloak):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     set_module_args(
@@ -118,7 +183,7 @@ def test_state_absent_should_not_create_absent_user(monkeypatch, url_mock_admin_
     assert ansible_exit_json['msg'] == 'User does not exist, doing nothing.'
 
 
-def test_state_present_should_create_absent_user(monkeypatch, url_mock_admin_only):
+def test_state_present_should_create_absent_user(monkeypatch, url_mock_keycloak):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     set_module_args(
@@ -136,5 +201,23 @@ def test_state_present_should_create_absent_user(monkeypatch, url_mock_admin_onl
     assert ansible_exit_json['msg'] == 'User to_add_user has been created.'
 
 
-def test_state_absent_should_delete_existing_user(monkeypatch):
-    pass
+@pytest.mark.parametrize('user_to_delete', [
+    {'keycloak_username': 'to_delete'},
+    {'id': '994eeb5e-62e1-4bb9-8cb7-667f53e62f01'},
+], ids=['with name', 'with id'])
+def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak, user_to_delete):
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+            'auth_keycloak_url': 'http://keycloak.url/auth',
+            'auth_username': 'test_admin',
+            'auth_password': 'admin_password',
+            'auth_realm': 'master',
+            'state': 'absent'
+        }
+    arguments.update(user_to_delete)
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_user.main()
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == ('User %s has been deleted.' % list(user_to_delete.values())[0])
