@@ -19,7 +19,7 @@ def open_url_mock(mocker):
     )
 
 
-USER_RESPONSE = r"""[
+LIST_USER_RESPONSE_ADMIN_ONLY = r"""[
   {
     "id": "882ddb5e-51d0-4aa9-8cb7-556f53e62e90",
     "createdTimestamp": 1549805949269,
@@ -47,7 +47,7 @@ RESPONSE_DICT = {
     'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': TextIOWrapper(
         BytesIO(b'{"access_token": "a long token"}'), encoding='utf8'),
     'http://keycloak.url/auth/admin/realms/master/users': TextIOWrapper(
-        BytesIO(to_bytes(USER_RESPONSE)), encoding='utf8'),
+        BytesIO(to_bytes(LIST_USER_RESPONSE_ADMIN_ONLY)), encoding='utf8')
 }
 
 
