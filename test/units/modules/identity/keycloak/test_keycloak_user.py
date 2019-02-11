@@ -55,19 +55,26 @@ CREATED_USER_RESPONSE = """{
 """
 
 
-def create_wrapper(text_as_string):
-    def _create_wrapper():
-        return TextIOWrapper(BytesIO(to_bytes(text_as_string)), encoding='utf8')
-    return _create_wrapper
-
-
 @pytest.fixture
 def url_mock_admin_only(mocker):
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
-        side_effect=mocked_requests_get,
+        side_effect=build_mocked_request(RESPONSE_ADMIN_ONLY),
         autospec=True
     )
+
+
+def build_mocked_request(response_dict):
+    def _mocked_requests(*args, **kwargs):
+        url = args[0]
+        method = kwargs['method']
+        future_response = response_dict.get(url, None)
+        if isinstance(future_response, dict):
+            future_response = future_response[method]
+        if callable(future_response):
+            return future_response()
+        return future_response
+    return _mocked_requests
 
 
 class CreatedUserMockResponse():
@@ -75,7 +82,13 @@ class CreatedUserMockResponse():
         self.headers = {'Location': 'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91'}
 
 
-RESPONSE_DICT = {
+def create_wrapper(text_as_string):
+    def _create_wrapper():
+        return TextIOWrapper(BytesIO(to_bytes(text_as_string)), encoding='utf8')
+    return _create_wrapper
+
+
+RESPONSE_ADMIN_ONLY = {
     'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token bla"}'),
     'http://keycloak.url/auth/admin/realms/master/users': {
         'GET': create_wrapper(LIST_USER_RESPONSE_ADMIN_ONLY),
@@ -86,18 +99,7 @@ RESPONSE_DICT = {
 }
 
 
-def mocked_requests_get(*args, **kwargs):
-    url = args[0]
-    method = kwargs['method']
-    future_response = RESPONSE_DICT.get(url, None)
-    if isinstance(future_response, dict):
-        future_response = future_response[method]
-    if callable(future_response):
-        return future_response()
-    return future_response
-
-
-def test_state_absent_should_not_create_absent_user(monkeypatch, open_url_mock):
+def test_state_absent_should_not_create_absent_user(monkeypatch, url_mock_admin_only):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     set_module_args(
@@ -116,7 +118,7 @@ def test_state_absent_should_not_create_absent_user(monkeypatch, open_url_mock):
     assert ansible_exit_json['msg'] == 'User does not exist, doing nothing.'
 
 
-def test_state_present_should_create_absent_user(monkeypatch, open_url_mock):
+def test_state_present_should_create_absent_user(monkeypatch, url_mock_admin_only):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     set_module_args(
@@ -132,3 +134,7 @@ def test_state_present_should_create_absent_user(monkeypatch, open_url_mock):
         keycloak_user.main()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'User to_add_user has been created.'
+
+
+def test_state_absent_should_delete_existing_user(monkeypatch):
+    pass
