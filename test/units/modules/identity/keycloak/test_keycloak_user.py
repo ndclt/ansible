@@ -115,6 +115,28 @@ CREATED_USER_RESPONSE = """{
 }
 """
 
+UPDATED_USER = """{
+    "id": "883eeb5e-51d0-4aa9-8cb7-667f53e62e90",
+    "createdTimestamp": 1549806949269,
+    "username": "user1",
+    "enabled": true,
+    "totp": false,
+    "email": "user1@domain.net",
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": true,
+      "view": true,
+      "mapRoles": true,
+      "impersonate": true,
+      "manage": true
+    }
+  }"""
+
 
 @pytest.fixture
 def url_mock_keycloak(mocker):
@@ -160,7 +182,11 @@ RESPONSE_ADMIN_ONLY = {
     'http://keycloak.url/auth/admin/realms/master/users/994eeb5e-62e1-4bb9-8cb7-667f53e62f01': {
         'GET': create_wrapper(TO_DELETE_USER),
         'DELETE': None
-        }
+    },
+    'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
+        'PUT': None,
+        'GET': create_wrapper(UPDATED_USER)
+    }
 }
 
 
@@ -221,3 +247,28 @@ def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak
         keycloak_user.main()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == ('User %s has been deleted.' % list(user_to_delete.values())[0])
+
+
+@pytest.mark.parametrize('user_to_update', [
+    {'keycloak_username': 'user1'},
+    {'id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'},
+], ids=['with name', 'with id'])
+def test_state_present_should_update_existing_user(monkeypatch, url_mock_keycloak, user_to_update):
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+            'auth_keycloak_url': 'http://keycloak.url/auth',
+            'auth_username': 'test_admin',
+            'auth_password': 'admin_password',
+            'auth_realm': 'master',
+            'state': 'present',
+            'email': 'user1@domain.net'
+        }
+    arguments.update(user_to_update)
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_user.main()
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == ('User %s has been updated.' % list(user_to_update.values())[0])
+    assert ansible_exit_json['diff'] == {'email': 'user1@domain.net'}
+
