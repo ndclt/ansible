@@ -91,9 +91,9 @@ def run_module():
         keycloak_username=dict(type='str'),
         id=dict(type='str'),
 
-        email_verified=dict(type='bool', default=False),
-        enabled=dict(type='bool', default=True),
-        attributes=dict(type='dict', default={}),
+        email_verified=dict(type='bool'),
+        enabled=dict(type='bool'),
+        attributes=dict(type='dict'),
         email=dict(type=str)
     )
 
@@ -108,10 +108,6 @@ def run_module():
     user_name = module.params.get('keycloak_username')
     realm = module.params.get('realm')
     state = module.params.get('state')
-
-    given_user_id = module.params.get('keycloak_username')
-    if not given_user_id:
-        given_user_id = module.params.get('id')
 
     new_given_user_id = {'name': module.params.get('keycloak_username')}
     if not new_given_user_id['name']:
@@ -154,11 +150,11 @@ def run_module():
 
     # If the user does not exist yet, before_user is still empty
     manage_modifications(before_user, new_given_user_id, kc, module, realm, result,
-                         state, updated_user)
+                         state, updated_user, changeset)
 
 
 def manage_modifications(before_user, given_user_id, kc, module, realm, result,
-                         state, updated_user):
+                         state, updated_user, changeset):
     if before_user == dict():
         if state == 'absent':
             # do nothing and exit
@@ -203,7 +199,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             else:
                 asked_id = given_user_id['id']
 
-            kc.update_user(asked_id, updated_user, realm=realm)
+            kc.update_user(asked_id, changeset, realm=realm)
             after_user = kc.get_user_by_id(asked_id, realm=realm)
             if before_user == after_user:
                 result['changed'] = False
