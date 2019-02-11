@@ -77,7 +77,7 @@ def build_mocked_request(response_dict):
     return _mocked_requests
 
 
-class CreatedUserMockResponse():
+class CreatedUserMockResponse(object):
     def __init__(self):
         self.headers = {'Location': 'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91'}
 
