@@ -42,18 +42,54 @@ LIST_USER_RESPONSE_ADMIN_ONLY = r"""[
   }
 ]"""
 
+CREATED_USER_RESPONSE = """{
+    "id": "992ddb5e-51d0-4aa9-8cb7-556f53e62e91",
+    "createdTimestamp": 1549805950370,
+    "username": "to_add_user",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": true,
+      "view": true,
+      "mapRoles": true,
+      "impersonate": true,
+      "manage": true
+    }
+}
+"""
+
+
+class MockResponse():
+    def __init__(self):
+        self.headers = {'Location': 'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91'}
+
 
 RESPONSE_DICT = {
     'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': TextIOWrapper(
         BytesIO(b'{"access_token": "a long token"}'), encoding='utf8'),
-    'http://keycloak.url/auth/admin/realms/master/users': TextIOWrapper(
-        BytesIO(to_bytes(LIST_USER_RESPONSE_ADMIN_ONLY)), encoding='utf8')
+    'http://keycloak.url/auth/admin/realms/master/users': {
+        'GET': TextIOWrapper(BytesIO(to_bytes(LIST_USER_RESPONSE_ADMIN_ONLY)), encoding='utf8'),
+        'POST': MockResponse()
+    },
+    'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91': TextIOWrapper(
+        BytesIO(to_bytes(CREATED_USER_RESPONSE)), encoding='utf8')
 }
 
 
 def mocked_requests_get(*args, **kwargs):
     url = args[0]
-    return RESPONSE_DICT.get(url, None)
+    method = kwargs['method']
+    response = RESPONSE_DICT.get(url, None)
+    if not isinstance(response, dict):
+        return response
+    else:
+        return response[method]
 
 
 def test_state_absent_should_not_create_absent_user(monkeypatch, open_url_mock):
@@ -90,5 +126,4 @@ def test_state_present_should_create_absent_user(monkeypatch, open_url_mock):
     with pytest.raises(AnsibleExitJson) as exec_error:
         keycloak_user.main()
     ansible_exit_json = exec_error.value.args[0]
-    # open_url_mock.mock_calls
-    assert ansible_exit_json['msg'] == 'User to_add_user has been created'
+    assert ansible_exit_json['msg'] == 'User to_add_user has been created.'
