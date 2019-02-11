@@ -183,7 +183,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
 
         result['end_state'] = sanitize_user_representation(after_user)
 
-        result['msg'] = 'user %s has been created.' % given_user_id
+        result['msg'] = 'User %s has been created.' % given_user_id
         module.exit_json(**result)
     else:
         if state == 'present':
@@ -213,7 +213,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
                     after=sanitize_user_representation(after_user))
             result['end_state'] = sanitize_user_representation(after_user)
 
-            result['msg'] = 'user %s has been updated.' % given_user_id
+            result['msg'] = 'User %s has been updated.' % given_user_id
             module.exit_json(**result)
         else:
             # Delete existing user
@@ -230,7 +230,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             kc.delete_user(asked_id, realm=realm)
             result['proposed'] = dict()
             result['end_state'] = dict()
-            result['msg'] = 'user %s has been deleted.' % given_user_id
+            result['msg'] = 'User %s has been deleted.' % given_user_id
             module.exit_json(**result)
 
 
