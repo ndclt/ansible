@@ -177,13 +177,12 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
         if module.check_mode:
             module.exit_json(**result)
 
-        kc.create_user(updated_user, realm=realm)
-        # created user can only be known by its username (cannot give an id to keycloak).
-        after_user = kc.get_user_by_name(updated_user['username'], realm=realm)
+        response = kc.create_user(updated_user, realm=realm)
+        after_user = kc.get_json_from_url(response.headers.get('Location'))
 
         result['end_state'] = sanitize_user_representation(after_user)
 
-        result['msg'] = 'User %s has been created.' % given_user_id
+        result['msg'] = 'User %s has been created.' % given_user_id['name']
         module.exit_json(**result)
     else:
         if state == 'present':
