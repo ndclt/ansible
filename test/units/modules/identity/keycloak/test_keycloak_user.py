@@ -73,3 +73,22 @@ def test_state_absent_should_not_create_absent_user(monkeypatch, open_url_mock):
         keycloak_user.main()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'User does not exist, doing nothing.'
+
+
+def test_state_present_should_create_absent_user(monkeypatch, open_url_mock):
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    set_module_args(
+        {
+            'auth_keycloak_url': 'http://keycloak.url/auth',
+            'auth_username': 'test_admin',
+            'auth_password': 'admin_password',
+            'auth_realm': 'master',
+            'keycloak_username': 'to_add_user',
+            'state': 'present'
+        })
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_user.main()
+    ansible_exit_json = exec_error.value.args[0]
+    # open_url_mock.mock_calls
+    assert ansible_exit_json['msg'] == 'User to_add_user has been created'
