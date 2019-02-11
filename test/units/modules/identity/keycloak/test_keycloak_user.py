@@ -62,7 +62,7 @@ def create_wrapper(text_as_string):
 
 
 @pytest.fixture
-def open_url_mock(mocker):
+def url_mock_admin_only(mocker):
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
         side_effect=mocked_requests_get,
@@ -70,7 +70,7 @@ def open_url_mock(mocker):
     )
 
 
-class MockResponse():
+class CreatedUserMockResponse():
     def __init__(self):
         self.headers = {'Location': 'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91'}
 
@@ -79,7 +79,7 @@ RESPONSE_DICT = {
     'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token bla"}'),
     'http://keycloak.url/auth/admin/realms/master/users': {
         'GET': create_wrapper(LIST_USER_RESPONSE_ADMIN_ONLY),
-        'POST': MockResponse()
+        'POST': CreatedUserMockResponse()
     },
     'http://keycloak.url/auth/admin/realms/master/users/992ddb5e-51d0-4aa9-8cb7-556f53e62e91': create_wrapper(
         CREATED_USER_RESPONSE)
