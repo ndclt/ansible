@@ -116,6 +116,7 @@ def run_module():
     new_given_user_id = {'name': module.params.get('keycloak_username')}
     if not new_given_user_id['name']:
         new_given_user_id.update({'id': module.params.get('id')})
+        new_given_user_id.pop('name')
 
     user_params = [
         x for x in module.params
@@ -212,7 +213,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
                     after=sanitize_user_representation(after_user))
             result['end_state'] = sanitize_user_representation(after_user)
 
-            result['msg'] = 'User %s has been updated.' % given_user_id
+            result['msg'] = 'User %s has been updated.' % list(given_user_id.values())[0]
             module.exit_json(**result)
         else:
             # Delete existing user
@@ -229,7 +230,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             kc.delete_user(asked_id, realm=realm)
             result['proposed'] = dict()
             result['end_state'] = dict()
-            result['msg'] = 'User %s has been deleted.' % given_user_id
+            result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[0]
             module.exit_json(**result)
 
 
