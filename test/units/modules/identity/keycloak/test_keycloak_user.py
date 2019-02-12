@@ -172,7 +172,7 @@ def create_wrapper(text_as_string):
 
 
 RESPONSE_ADMIN_ONLY = {
-    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token bla"}'),
+    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token"}'),
     'http://keycloak.url/auth/admin/realms/master/users': {
         'GET': create_wrapper(LIST_USER_RESPONSE_ADMIN_ONLY),
         'POST': CreatedUserMockResponse()
