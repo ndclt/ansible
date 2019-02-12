@@ -194,7 +194,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
                 result['changed'] = (before_user != updated_user)
 
                 module.exit_json(**result)
-            if given_user_id['name']:
+            if 'name' in given_user_id.keys():
                 asked_id = kc.get_user_id(updated_user['username'], realm=realm)
             else:
                 asked_id = given_user_id['id']
