@@ -199,6 +199,10 @@ class CreatedUserMockResponse(object):
 
 
 def create_wrapper(text_as_string):
+    """Allow to mock many times a call to one address.
+
+    Without this function, the TextIOWrapper is empty for the second call.
+    """
     def _create_wrapper():
         return TextIOWrapper(BytesIO(to_bytes(text_as_string)), encoding='utf8')
     return _create_wrapper
