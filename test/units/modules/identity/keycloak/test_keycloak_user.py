@@ -1,5 +1,7 @@
 from __future__ import (absolute_import, division, print_function)
 
+from itertools import count
+
 import pytest
 
 from ansible.modules.identity.keycloak import keycloak_user
@@ -137,27 +139,58 @@ UPDATED_USER = """{
     }
   }"""
 
+GET_USER_BY_ID = """{
+    "id": "883eeb5e-51d0-4aa9-8cb7-667f53e62e90",
+    "createdTimestamp": 1549806949269,
+    "username": "user1",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": true,
+      "view": true,
+      "mapRoles": true,
+      "impersonate": true,
+      "manage": true
+    }
+  }
+"""
+
 
 @pytest.fixture
 def url_mock_keycloak(mocker):
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
-        side_effect=build_mocked_request(RESPONSE_ADMIN_ONLY),
+        side_effect=build_mocked_request(count()),
         autospec=True
     )
 
 
-def build_mocked_request(response_dict):
+def build_mocked_request(get_id_user_count):
     def _mocked_requests(*args, **kwargs):
         url = args[0]
         method = kwargs['method']
-        future_response = response_dict.get(url, None)
-        if isinstance(future_response, dict):
-            future_response = future_response[method]
-        if callable(future_response):
-            return future_response()
-        return future_response
+        future_response = RESPONSE_ADMIN_ONLY.get(url, None)
+        return get_response(future_response, method, get_id_user_count)
     return _mocked_requests
+
+
+def get_response(object_with_future_response, method, get_id_call_count):
+    if callable(object_with_future_response):
+        return object_with_future_response()
+    if isinstance(object_with_future_response, dict):
+        return get_response(
+            object_with_future_response[method], method, get_id_call_count)
+    if isinstance(object_with_future_response, list):
+        call_number = get_id_call_count.__next__()
+        print('call to id number {}'.format(call_number))
+        return get_response(
+            object_with_future_response[call_number], method, get_id_call_count)
 
 
 class CreatedUserMockResponse(object):
@@ -185,7 +218,8 @@ RESPONSE_ADMIN_ONLY = {
     },
     'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
         'PUT': None,
-        'GET': create_wrapper(UPDATED_USER)
+        'GET': [create_wrapper(GET_USER_BY_ID),
+                create_wrapper(UPDATED_USER)]
     }
 }
 
