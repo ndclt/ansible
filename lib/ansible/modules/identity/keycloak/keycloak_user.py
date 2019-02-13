@@ -147,12 +147,7 @@ def run_module():
         module.params.get(x) is not None]
 
     kc = KeycloakAPI(module)
-    if 'name' in given_user_id:
-        before_user = kc.get_user_by_name(given_user_id['name'], realm=realm)
-    else:
-        before_user = kc.get_user_by_id(given_user_id['id'], realm=realm)
-    if before_user is None:
-        before_user = dict()
+    before_user = get_initial_user(given_user_id, kc, realm)
 
     changeset = dict()
     for user_param in user_params:
@@ -177,6 +172,16 @@ def run_module():
     # If the user does not exist yet, before_user is still empty
     manage_modifications(before_user, given_user_id, kc, module, realm, result,
                          state, updated_user, changeset)
+
+
+def get_initial_user(given_user_id, kc, realm):
+    if 'name' in given_user_id:
+        before_user = kc.get_user_by_name(given_user_id['name'], realm=realm)
+    else:
+        before_user = kc.get_user_by_id(given_user_id['id'], realm=realm)
+    if before_user is None:
+        before_user = dict()
+    return before_user
 
 
 def attributes_format_is_correct(given_attributes):
