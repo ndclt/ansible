@@ -364,9 +364,9 @@ def test_wrong_attributes_type_should_raise_an_error(monkeypatch, wrong_attribut
         'auth_username': 'test_admin',
         'auth_password': 'admin_password',
         'auth_realm': 'master',
-        'keycloak_username': 'user1'
+        'keycloak_username': 'user1',
+        'keycloak_attributes': wrong_attributes
     }
-    arguments.update({'keycloak_attributes': wrong_attributes})
     set_module_args(arguments)
     with pytest.raises(AnsibleFailJson) as exec_error:
         keycloak_user.main()
