@@ -124,9 +124,12 @@ def run_module():
                            )
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
-    user_name = module.params.get('keycloak_username')
     realm = module.params.get('realm')
     state = module.params.get('state')
+    given_user_id = {'name': module.params.get('keycloak_username')}
+    if not given_user_id['name']:
+        given_user_id.update({'id': module.params.get('id')})
+        given_user_id.pop('name')
 
     if not attributes_format_is_correct(module.params.get('keycloak_attributes')):
         module.fail_json(msg=(
@@ -138,22 +141,16 @@ def run_module():
             'Required actions can only have the following values: {0}'.format(
                 ', '.join(AUTHORIZED_REQUIRED_ACTIONS))))
 
-    given_user_id = {'name': module.params.get('keycloak_username')}
-    if not given_user_id['name']:
-        given_user_id.update({'id': module.params.get('id')})
-        given_user_id.pop('name')
-
     user_params = [
         x for x in module.params
         if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
         module.params.get(x) is not None]
 
     kc = KeycloakAPI(module)
-    if user_name is None:
-        asked_id = module.params.get('id')
-        before_user = kc.get_user_by_id(asked_id, realm=realm)
+    if 'name' in given_user_id:
+        before_user = kc.get_user_by_name(given_user_id['name'], realm=realm)
     else:
-        before_user = kc.get_user_by_name(user_name, realm=realm)
+        before_user = kc.get_user_by_id(given_user_id['id'], realm=realm)
     if before_user is None:
         before_user = dict()
 
