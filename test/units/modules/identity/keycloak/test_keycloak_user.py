@@ -316,7 +316,7 @@ def dynamic_url_mock_keycloak(mocker, build_dict_request):
     )
 
 
-def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_mock_keycloak, request):
+def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_mock_keycloak):
     user_to_update, _ = dynamic_url_mock_keycloak
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
@@ -335,4 +335,19 @@ def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_mock
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == ('User %s has been updated.' % list(user_to_update.values())[0])
     assert ansible_exit_json['end_state'] == json.loads(UPDATED_USER)
+
+
+def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch, url_mock_keycloak):
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'keycloak_username': 'user1',
+        'id': '00000000-51d0-4aa9-8cb7-667f53e62e90',
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleFailJson) as exec_error:
+        keycloak_user.main()
+    ansible_failed_json = exec_error.value.args[0]
+    assert ansible_failed_json['msg'] == ('parameters are mutually exclusive: keycloak_username, id')
+
 
