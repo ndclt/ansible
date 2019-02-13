@@ -166,16 +166,16 @@ GET_USER_BY_ID = """{
 def url_mock_keycloak(mocker):
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
-        side_effect=build_mocked_request(count()),
+        side_effect=build_mocked_request(count(), RESPONSE_ADMIN_ONLY),
         autospec=True
     )
 
 
-def build_mocked_request(get_id_user_count):
+def build_mocked_request(get_id_user_count, response_dict):
     def _mocked_requests(*args, **kwargs):
         url = args[0]
         method = kwargs['method']
-        future_response = RESPONSE_ADMIN_ONLY.get(url, None)
+        future_response = response_dict.get(url, None)
         return get_response(future_response, method, get_id_user_count)
     return _mocked_requests
 
@@ -219,11 +219,6 @@ RESPONSE_ADMIN_ONLY = {
     'http://keycloak.url/auth/admin/realms/master/users/994eeb5e-62e1-4bb9-8cb7-667f53e62f01': {
         'GET': create_wrapper(TO_DELETE_USER),
         'DELETE': None
-    },
-    'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
-        'PUT': None,
-        'GET': [create_wrapper(GET_USER_BY_ID),
-                create_wrapper(UPDATED_USER)]
     }
 }
 
@@ -287,11 +282,40 @@ def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak
     assert ansible_exit_json['msg'] == ('User %s has been deleted.' % list(user_to_delete.values())[0])
 
 
-@pytest.mark.parametrize('user_to_update', [
+@pytest.fixture(params=[
     {'keycloak_username': 'user1'},
-    {'id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'},
-], ids=['with name', 'with id'])
-def test_state_present_should_update_existing_user(monkeypatch, url_mock_keycloak, user_to_update):
+    {'id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'}], ids=['with name', 'with_id'])
+def build_dict_request(request):
+    new_response_dictionary = RESPONSE_ADMIN_ONLY.copy()
+    if 'keycloak_username' in request.param.keys():
+        new_response_dictionary.update({
+            'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
+                'PUT': None,
+                'GET':create_wrapper(UPDATED_USER)
+            }})
+    else:
+        new_response_dictionary .update({
+            'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
+                'PUT': None,
+                'GET': [create_wrapper(GET_USER_BY_ID),
+                        create_wrapper(UPDATED_USER)
+                        ]
+            }})
+    return request.param, new_response_dictionary
+
+
+@pytest.fixture()
+def dynamic_url_mock_keycloak(mocker, build_dict_request):
+    parameters, response_dictionary = build_dict_request
+    return parameters, mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), response_dictionary),
+        autospec=True
+    )
+
+
+def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_mock_keycloak, request):
+    user_to_update, _ = dynamic_url_mock_keycloak
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     arguments = {
