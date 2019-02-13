@@ -246,21 +246,26 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
                           realm, result, updated_user)
         else:
             # Delete existing user
-            result['changed'] = True
-            if module._diff:
-                result['diff']['before'] = sanitize_user_representation(
-                    before_user)
-                result['diff']['after'] = ''
+            deleting_user(before_user, given_user_id, kc, module, realm,
+                          result, updated_user)
 
-            if module.check_mode:
-                module.exit_json(**result)
-            asked_id = kc.get_user_id(updated_user['username'], realm=realm)
 
-            kc.delete_user(asked_id, realm=realm)
-            result['proposed'] = dict()
-            result['end_state'] = dict()
-            result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[0]
-            module.exit_json(**result)
+def deleting_user(before_user, given_user_id, kc, module, realm, result,
+                  updated_user):
+    result['changed'] = True
+    if module._diff:
+        result['diff']['before'] = sanitize_user_representation(
+            before_user)
+        result['diff']['after'] = ''
+    if module.check_mode:
+        module.exit_json(**result)
+    asked_id = kc.get_user_id(updated_user['username'], realm=realm)
+    kc.delete_user(asked_id, realm=realm)
+    result['proposed'] = dict()
+    result['end_state'] = dict()
+    result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[
+        0]
+    module.exit_json(**result)
 
 
 def updating_user(before_user, changeset, given_user_id, kc, module, realm,
