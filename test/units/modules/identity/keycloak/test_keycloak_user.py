@@ -375,3 +375,22 @@ def test_wrong_attributes_type_should_raise_an_error(monkeypatch, wrong_attribut
     assert ansible_failed_json['msg'] == (
         'Attributes are not in the correct format. Should be a dictionary with'
         ' one value per key as string, integer and boolean')
+
+
+def test_correct_attributes_type_should_pass(monkeypatch, dynamic_url_for_user_update):
+    """This test only check that accepted types don't raised errors.
+    There is no check on the returned values."""
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'keycloak_username': 'user1',
+        'keycloak_attributes': {
+            'int': 1, 'str': 'some text', 'float': 0.1, 'bool': True}
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson):
+        keycloak_user.main()
