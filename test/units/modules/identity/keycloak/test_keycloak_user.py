@@ -1,5 +1,6 @@
 from __future__ import (absolute_import, division, print_function)
 
+import json
 from itertools import count
 
 import pytest
@@ -332,5 +333,5 @@ def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_mock
         keycloak_user.main()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == ('User %s has been updated.' % list(user_to_update.values())[0])
-    assert ansible_exit_json['diff'] == {'email': 'user1@domain.net'}
+    assert ansible_exit_json['end_state'] == json.loads(UPDATED_USER)
 
