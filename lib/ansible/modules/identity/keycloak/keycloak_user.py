@@ -93,8 +93,8 @@ def run_module():
 
         email_verified=dict(type='bool'),
         enabled=dict(type='bool'),
-        attributes=dict(type='dict'),
-        email=dict(type=str)
+        keycloak_attributes=dict(type='dict'),
+        email=dict(type='str'),
     )
 
     argument_spec.update(meta_args)
