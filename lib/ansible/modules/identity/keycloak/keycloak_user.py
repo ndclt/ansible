@@ -238,23 +238,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             result['msg'] = 'User does not exist, doing nothing.'
             module.exit_json(**result)
 
-        # create new user
-        result['changed'] = True
-
-        if module._diff:
-            result['diff'] = dict(before='',
-                                  after=sanitize_user_representation(updated_user))
-
-        if module.check_mode:
-            module.exit_json(**result)
-
-        response = kc.create_user(updated_user, realm=realm)
-        after_user = kc.get_json_from_url(response.headers.get('Location'))
-
-        result['end_state'] = sanitize_user_representation(after_user)
-
-        result['msg'] = 'User %s has been created.' % given_user_id['name']
-        module.exit_json(**result)
+        create_user(given_user_id, kc, module, realm, result, updated_user)
     else:
         if state == 'present':
             # update existing user
@@ -302,6 +286,21 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             result['end_state'] = dict()
             result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[0]
             module.exit_json(**result)
+
+
+def create_user(given_user_id, kc, module, realm, result, updated_user):
+    # create new user
+    result['changed'] = True
+    if module._diff:
+        result['diff'] = dict(before='',
+                              after=sanitize_user_representation(updated_user))
+    if module.check_mode:
+        module.exit_json(**result)
+    response = kc.create_user(updated_user, realm=realm)
+    after_user = kc.get_json_from_url(response.headers.get('Location'))
+    result['end_state'] = sanitize_user_representation(after_user)
+    result['msg'] = 'User %s has been created.' % given_user_id['name']
+    module.exit_json(**result)
 
 
 def main():
