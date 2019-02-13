@@ -292,7 +292,7 @@ def build_user_update_request(request):
         new_response_dictionary.update({
             'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
                 'PUT': None,
-                'GET':create_wrapper(UPDATED_USER)
+                'GET': create_wrapper(UPDATED_USER)
             }})
     else:
         new_response_dictionary .update({
@@ -300,8 +300,7 @@ def build_user_update_request(request):
                 'PUT': None,
                 'GET': [create_wrapper(GET_USER_BY_ID),
                         create_wrapper(UPDATED_USER)
-                        ]
-            }})
+            ]}})
     return request.param, new_response_dictionary
 
 
@@ -389,7 +388,8 @@ def test_correct_attributes_type_should_pass(monkeypatch, dynamic_url_for_user_u
         'auth_realm': 'master',
         'keycloak_username': 'user1',
         'keycloak_attributes': {
-            'int': 1, 'str': 'some text', 'float': 0.1, 'bool': True}
+            'int': 1, 'str': 'some text', 'float': 0.1, 'bool': True},
+        'required_actions': ['CONFIGURE_TOPT', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson):
