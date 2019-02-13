@@ -145,6 +145,20 @@ def run_module():
     kc = KeycloakAPI(module)
     before_user = get_initial_user(given_user_id, kc, realm)
 
+    changeset = create_changeset(module)
+
+    updated_user = before_user.copy()
+    updated_user.update(changeset)
+
+    result['proposed'] = changeset
+    result['existing'] = before_user
+
+    # If the user does not exist yet, before_user is still empty
+    manage_modifications(before_user, given_user_id, kc, module, realm, result,
+                         state, updated_user, changeset)
+
+
+def create_changeset(module):
     user_params = [
         x for x in module.params
         if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
@@ -162,16 +176,7 @@ def run_module():
                     pass
 
         changeset[camel(user_param)] = new_param_value
-
-    updated_user = before_user.copy()
-    updated_user.update(changeset)
-
-    result['proposed'] = changeset
-    result['existing'] = before_user
-
-    # If the user does not exist yet, before_user is still empty
-    manage_modifications(before_user, given_user_id, kc, module, realm, result,
-                         state, updated_user, changeset)
+    return changeset
 
 
 def get_initial_user(given_user_id, kc, realm):
