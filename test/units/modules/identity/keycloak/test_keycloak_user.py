@@ -336,7 +336,7 @@ def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_for_
     assert ansible_exit_json['end_state'] == json.loads(UPDATED_USER)
 
 
-def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch, url_mock_keycloak):
+def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     arguments = {
@@ -351,4 +351,26 @@ def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch, url_mock_ke
         'parameters are mutually exclusive: keycloak_username, id')
 
 
-
+@pytest.mark.parametrize('wrong_attributes', [
+    {'list1': ['a', 'b', 'c']},
+    {'list2': [['a', 2, 3]]},
+    {'dict1': {'a': 2}},
+], ids=['too long list', 'list into a list', 'dictionary as value'])
+def test_wrong_attributes_type_should_raise_an_error(monkeypatch, wrong_attributes):
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'keycloak_username': 'user1'
+    }
+    arguments.update({'keycloak_attributes': wrong_attributes})
+    set_module_args(arguments)
+    with pytest.raises(AnsibleFailJson) as exec_error:
+        keycloak_user.main()
+    ansible_failed_json = exec_error.value.args[0]
+    assert ansible_failed_json['msg'] == (
+        'Attributes are not in the correct format. Should be a dictionary with'
+        ' one value per key as string, integer and boolean')
