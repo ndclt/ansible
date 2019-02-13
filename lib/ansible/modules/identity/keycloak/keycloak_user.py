@@ -102,6 +102,7 @@ def run_module():
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
                            required_one_of=([['keycloak_username', 'id']]),
+                           mutually_exclusive=[['keycloak_username', 'id']]
                            )
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
@@ -168,8 +169,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
 
         if module._diff:
             result['diff'] = dict(before='',
-                                  after=sanitize_user_representation(
-                                      updated_user))
+                                  after=sanitize_user_representation(updated_user))
 
         if module.check_mode:
             module.exit_json(**result)
