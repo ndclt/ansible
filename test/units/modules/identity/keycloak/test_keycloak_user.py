@@ -409,3 +409,30 @@ def test_correct_attributes_type_should_pass(monkeypatch, url_for_fake_update):
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson):
         keycloak_user.main()
+
+
+@pytest.mark.parametrize('wrong_required_actions', [
+    ['not in the list', 'CONFIGURE_TOPT'],
+    [1, 'UPDATE_PASSWORD'],
+    1,
+    'not in the list',
+], ids=['string not in the list', 'integer instead of string in a list',
+        'integer alone instead of a string', 'string alone not in the list'])
+def test_wrong_required_actions_should_raise_errors(monkeypatch, wrong_required_actions):
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'keycloak_username': 'user1',
+        'required_actions': wrong_required_actions
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleFailJson) as exec_error:
+        keycloak_user.main()
+    ansible_failed_json = exec_error.value.args[0]
+    assert ansible_failed_json['msg'] == (
+        'Required actions can only have the following values: CONFIGURE_TOPT, '
+        'UPDATE_PASSWORD, UPDATE_PROFILE, VERIFY_EMAIL')
