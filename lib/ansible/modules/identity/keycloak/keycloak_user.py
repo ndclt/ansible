@@ -242,33 +242,8 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
     else:
         if state == 'present':
             # update existing user
-            result['changed'] = True
-            if module.check_mode:
-                # We can only compare the current user with the proposed updates we have
-                if module._diff:
-                    result['diff'] = dict(
-                        before=sanitize_user_representation(before_user),
-                        after=sanitize_user_representation(updated_user))
-                result['changed'] = (before_user != updated_user)
-
-                module.exit_json(**result)
-            if 'name' in given_user_id.keys():
-                asked_id = kc.get_user_id(updated_user['username'], realm=realm)
-            else:
-                asked_id = given_user_id['id']
-
-            kc.update_user(asked_id, changeset, realm=realm)
-            after_user = kc.get_user_by_id(asked_id, realm=realm)
-            if before_user == after_user:
-                result['changed'] = False
-            if module._diff:
-                result['diff'] = dict(
-                    before=sanitize_user_representation(before_user),
-                    after=sanitize_user_representation(after_user))
-            result['end_state'] = sanitize_user_representation(after_user)
-
-            result['msg'] = 'User %s has been updated.' % list(given_user_id.values())[0]
-            module.exit_json(**result)
+            updating_user(before_user, changeset, given_user_id, kc, module,
+                          realm, result, updated_user)
         else:
             # Delete existing user
             result['changed'] = True
@@ -286,6 +261,36 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             result['end_state'] = dict()
             result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[0]
             module.exit_json(**result)
+
+
+def updating_user(before_user, changeset, given_user_id, kc, module, realm,
+                  result, updated_user):
+    result['changed'] = True
+    if module.check_mode:
+        # We can only compare the current user with the proposed updates we have
+        if module._diff:
+            result['diff'] = dict(
+                before=sanitize_user_representation(before_user),
+                after=sanitize_user_representation(updated_user))
+        result['changed'] = (before_user != updated_user)
+
+        module.exit_json(**result)
+    if 'name' in given_user_id.keys():
+        asked_id = kc.get_user_id(updated_user['username'], realm=realm)
+    else:
+        asked_id = given_user_id['id']
+    kc.update_user(asked_id, changeset, realm=realm)
+    after_user = kc.get_user_by_id(asked_id, realm=realm)
+    if before_user == after_user:
+        result['changed'] = False
+    if module._diff:
+        result['diff'] = dict(
+            before=sanitize_user_representation(before_user),
+            after=sanitize_user_representation(after_user))
+    result['end_state'] = sanitize_user_representation(after_user)
+    result['msg'] = 'User %s has been updated.' % list(given_user_id.values())[
+        0]
+    module.exit_json(**result)
 
 
 def create_user(given_user_id, kc, module, realm, result, updated_user):
