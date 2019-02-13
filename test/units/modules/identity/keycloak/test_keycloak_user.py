@@ -376,7 +376,22 @@ def test_wrong_attributes_type_should_raise_an_error(monkeypatch, wrong_attribut
         ' one value per key as string, integer and boolean')
 
 
-def test_correct_attributes_type_should_pass(monkeypatch, dynamic_url_for_user_update):
+@pytest.fixture()
+def url_for_fake_update(mocker):
+    new_response_dictionary = RESPONSE_ADMIN_ONLY.copy()
+    new_response_dictionary.update({
+        'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
+            'PUT': None,
+            'GET': create_wrapper(UPDATED_USER)
+        }})
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), new_response_dictionary),
+        autospec=True
+    )
+
+
+def test_correct_attributes_type_should_pass(monkeypatch, url_for_fake_update):
     """This test only check that accepted types don't raised errors.
     There is no check on the returned values."""
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
