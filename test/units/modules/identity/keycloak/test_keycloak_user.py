@@ -286,7 +286,7 @@ def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak
 @pytest.fixture(params=[
     {'keycloak_username': 'user1'},
     {'id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'}], ids=['with name', 'with_id'])
-def build_dict_request(request):
+def build_user_update_request(request):
     new_response_dictionary = RESPONSE_ADMIN_ONLY.copy()
     if 'keycloak_username' in request.param.keys():
         new_response_dictionary.update({
@@ -306,8 +306,8 @@ def build_dict_request(request):
 
 
 @pytest.fixture()
-def dynamic_url_mock_keycloak(mocker, build_dict_request):
-    parameters, response_dictionary = build_dict_request
+def dynamic_url_for_user_update(mocker, build_user_update_request):
+    parameters, response_dictionary = build_user_update_request
     return parameters, mocker.patch(
         'ansible.module_utils.keycloak.open_url',
         side_effect=build_mocked_request(count(), response_dictionary),
@@ -315,8 +315,8 @@ def dynamic_url_mock_keycloak(mocker, build_dict_request):
     )
 
 
-def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_mock_keycloak):
-    user_to_update, _ = dynamic_url_mock_keycloak
+def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_for_user_update):
+    user_to_update, _ = dynamic_url_for_user_update
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     arguments = {
