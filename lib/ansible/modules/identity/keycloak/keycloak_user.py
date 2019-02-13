@@ -102,6 +102,7 @@ def run_module():
         enabled=dict(type='bool'),
         keycloak_attributes=dict(type='dict'),
         email=dict(type='str'),
+        required_actions=dict(type='list')
     )
 
     argument_spec.update(meta_args)
