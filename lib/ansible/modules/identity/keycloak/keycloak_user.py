@@ -80,6 +80,8 @@ from ansible.module_utils.basic import AnsibleModule
 
 AUTHORIZED_REQUIRED_ACTIONS = [
     'CONFIGURE_TOPT', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
+# is this compatible with native string stategy?
+AUTHORIZED_ATTRIBUTE_VALUE_TYPE = (str, int, float, bool)
 
 
 def sanitize_user_representation(user_representation):
@@ -178,10 +180,6 @@ def run_module():
     # If the user does not exist yet, before_user is still empty
     manage_modifications(before_user, new_given_user_id, kc, module, realm, result,
                          state, updated_user, changeset)
-
-
-# is this compatible with native string stategy?
-AUTHORIZED_ATTRIBUTE_VALUE_TYPE = (str, int, float, bool)
 
 
 def attributes_format_is_correct(given_attributes):
