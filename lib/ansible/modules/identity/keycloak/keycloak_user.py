@@ -233,10 +233,7 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
     if before_user == dict():
         if state == 'absent':
             # do nothing and exit
-            if module._diff:
-                result['diff'] = dict(before='', after='')
-            result['msg'] = 'User does not exist, doing nothing.'
-            module.exit_json(**result)
+            do_nothing_and_exit(module, result)
 
         create_user(given_user_id, kc, module, realm, result, updated_user)
     else:
@@ -248,6 +245,13 @@ def manage_modifications(before_user, given_user_id, kc, module, realm, result,
             # Delete existing user
             deleting_user(before_user, given_user_id, kc, module, realm,
                           result, updated_user)
+
+
+def do_nothing_and_exit(module, result):
+    if module._diff:
+        result['diff'] = dict(before='', after='')
+    result['msg'] = 'User does not exist, doing nothing.'
+    module.exit_json(**result)
 
 
 def deleting_user(before_user, given_user_id, kc, module, realm, result,
