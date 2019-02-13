@@ -347,6 +347,8 @@ def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch, url_mock_ke
     with pytest.raises(AnsibleFailJson) as exec_error:
         keycloak_user.main()
     ansible_failed_json = exec_error.value.args[0]
-    assert ansible_failed_json['msg'] == ('parameters are mutually exclusive: keycloak_username, id')
+    assert ansible_failed_json['msg'] == (
+        'parameters are mutually exclusive: keycloak_username, id')
+
 
 
