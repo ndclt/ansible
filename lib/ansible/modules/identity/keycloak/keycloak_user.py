@@ -29,6 +29,13 @@ options:
         description:
             - Control to demo if the result of this module is changed or not
         required: false
+    keycloak_attributes:
+        description:
+            – a dictionary with the key and the value to put in keycloak. 
+            Keycloak will always return the value in a list. For example, 
+            if you send {'a key': 'some value'} when updated, the attributes 
+            will be returned as following {'a key': ['some value']}. Keys and 
+            values are converted into string.
 
 extends_documentation_fragment:
     - keycloak
