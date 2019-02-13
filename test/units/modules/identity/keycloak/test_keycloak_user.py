@@ -355,7 +355,8 @@ def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch):
     {'list1': ['a', 'b', 'c']},
     {'list2': [['a', 2, 3]]},
     {'dict1': {'a': 2}},
-], ids=['too long list', 'list into a list', 'dictionary as value'])
+    {'list3': [[['a']]]},
+], ids=['too long list', 'list into a list', 'dictionary as value', 'list russian doll'])
 def test_wrong_attributes_type_should_raise_an_error(monkeypatch, wrong_attributes):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
