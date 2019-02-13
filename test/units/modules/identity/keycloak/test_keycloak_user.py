@@ -192,6 +192,7 @@ def get_response(object_with_future_response, method, get_id_call_count):
         print('call to id number {}'.format(call_number))
         return get_response(
             object_with_future_response[call_number], method, get_id_call_count)
+    return object_with_future_response
 
 
 class CreatedUserMockResponse(object):
