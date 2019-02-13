@@ -189,7 +189,6 @@ def get_response(object_with_future_response, method, get_id_call_count):
             object_with_future_response[method], method, get_id_call_count)
     if isinstance(object_with_future_response, list):
         call_number = get_id_call_count.__next__()
-        print('call to id number {}'.format(call_number))
         return get_response(
             object_with_future_response[call_number], method, get_id_call_count)
     return object_with_future_response
