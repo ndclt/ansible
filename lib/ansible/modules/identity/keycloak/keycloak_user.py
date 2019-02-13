@@ -141,14 +141,14 @@ def run_module():
             'Required actions can only have the following values: {0}'.format(
                 ', '.join(AUTHORIZED_REQUIRED_ACTIONS))))
 
-    user_params = [
-        x for x in module.params
-        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
-        module.params.get(x) is not None]
 
     kc = KeycloakAPI(module)
     before_user = get_initial_user(given_user_id, kc, realm)
 
+    user_params = [
+        x for x in module.params
+        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
+        module.params.get(x) is not None]
     changeset = dict()
     for user_param in user_params:
         new_param_value = module.params.get(user_param)
