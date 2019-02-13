@@ -138,10 +138,10 @@ def run_module():
             'Required actions can only have the following values: {0}'.format(
                 ', '.join(AUTHORIZED_REQUIRED_ACTIONS))))
 
-    new_given_user_id = {'name': module.params.get('keycloak_username')}
-    if not new_given_user_id['name']:
-        new_given_user_id.update({'id': module.params.get('id')})
-        new_given_user_id.pop('name')
+    given_user_id = {'name': module.params.get('keycloak_username')}
+    if not given_user_id['name']:
+        given_user_id.update({'id': module.params.get('id')})
+        given_user_id.pop('name')
 
     user_params = [
         x for x in module.params
@@ -178,7 +178,7 @@ def run_module():
     result['existing'] = before_user
 
     # If the user does not exist yet, before_user is still empty
-    manage_modifications(before_user, new_given_user_id, kc, module, realm, result,
+    manage_modifications(before_user, given_user_id, kc, module, realm, result,
                          state, updated_user, changeset)
 
 
