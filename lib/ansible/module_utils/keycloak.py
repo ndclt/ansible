@@ -459,6 +459,12 @@ class KeycloakAPI(object):
             user_representation.pop('keycloakUsername')
         except KeyError:
             pass
+        try:
+            keycloak_attributes = user_representation.pop('keycloakAttributes')
+        except KeyError:
+            pass
+        else:
+            user_representation.update({'attributes': keycloak_attributes})
 
         user_url = URL_USER.format(url=self.baseurl, realm=realm, id=uuid)
 
