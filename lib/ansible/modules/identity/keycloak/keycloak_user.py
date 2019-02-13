@@ -154,8 +154,21 @@ def run_module():
     result['existing'] = before_user
 
     # If the user does not exist yet, before_user is still empty
-    manage_modifications(before_user, given_user_id, kc, module, realm, result,
-                         state, updated_user, changeset)
+    if before_user == dict():
+        if state == 'absent':
+            # do nothing and exit
+            do_nothing_and_exit(module, result)
+
+        create_user(given_user_id, kc, module, realm, result, updated_user)
+    else:
+        if state == 'present':
+            # update existing user
+            updating_user(before_user, changeset, given_user_id, kc, module,
+                          realm, result, updated_user)
+        else:
+            # Delete existing user
+            deleting_user(before_user, given_user_id, kc, module, realm,
+                          result, updated_user)
 
 
 def create_changeset(module):
@@ -226,25 +239,6 @@ def required_actions_are_in_authorized_list(given_required_actions):
     if given_required_actions not in AUTHORIZED_REQUIRED_ACTIONS:
         return False
     return True
-
-
-def manage_modifications(before_user, given_user_id, kc, module, realm, result,
-                         state, updated_user, changeset):
-    if before_user == dict():
-        if state == 'absent':
-            # do nothing and exit
-            do_nothing_and_exit(module, result)
-
-        create_user(given_user_id, kc, module, realm, result, updated_user)
-    else:
-        if state == 'present':
-            # update existing user
-            updating_user(before_user, changeset, given_user_id, kc, module,
-                          realm, result, updated_user)
-        else:
-            # Delete existing user
-            deleting_user(before_user, given_user_id, kc, module, realm,
-                          result, updated_user)
 
 
 def do_nothing_and_exit(module, result):
