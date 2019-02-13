@@ -117,6 +117,11 @@ def run_module():
     realm = module.params.get('realm')
     state = module.params.get('state')
 
+    if not attributes_format_is_correct(module.params.get('keycloak_attributes')):
+        module.fail_json(msg=(
+            'Attributes are not in the correct format. Should be a dictionary with '
+            'one value per key as string, integer and boolean'))
+
     new_given_user_id = {'name': module.params.get('keycloak_username')}
     if not new_given_user_id['name']:
         new_given_user_id.update({'id': module.params.get('id')})
@@ -159,6 +164,23 @@ def run_module():
     # If the user does not exist yet, before_user is still empty
     manage_modifications(before_user, new_given_user_id, kc, module, realm, result,
                          state, updated_user, changeset)
+
+
+def attributes_format_is_correct(given_attributes):
+    if not given_attributes:
+        return True
+    for one_value in given_attributes.values():
+        if isinstance(one_value, list):
+            if not one_attribute_format_is_correct(one_value):
+                return False
+    return True
+
+
+def one_attribute_format_is_correct(one_value):
+    if isinstance(one_value, list):
+        if len(one_value) > 1:
+            return False
+    return True
 
 
 def manage_modifications(before_user, given_user_id, kc, module, realm, result,
