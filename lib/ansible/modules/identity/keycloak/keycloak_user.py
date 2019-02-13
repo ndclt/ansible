@@ -39,6 +39,7 @@ options:
             if you send {'a key': 'some value'} when updated, the attributes 
             will be returned as following {'a key': ['some value']}. Keys and 
             values are converted into string.
+        required: false
 
 extends_documentation_fragment:
     - keycloak
