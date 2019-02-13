@@ -166,19 +166,31 @@ def run_module():
                          state, updated_user, changeset)
 
 
+# is this compatible with native string stategy?
+AUTHORIZED_ATTRIBUTE_VALUE_TYPE = (str, int, float, bool)
+
+
 def attributes_format_is_correct(given_attributes):
     if not given_attributes:
         return True
     for one_value in given_attributes.values():
         if isinstance(one_value, list):
-            if not one_attribute_format_is_correct(one_value):
+            if not attribute_as_list_format_is_correct(one_value):
                 return False
+        if isinstance(one_value, dict):
+            return False
+        if not isinstance(one_value, AUTHORIZED_ATTRIBUTE_VALUE_TYPE):
+            return False
     return True
 
 
-def one_attribute_format_is_correct(one_value):
-    if isinstance(one_value, list):
+def attribute_as_list_format_is_correct(one_value, first_call=True):
+    if isinstance(one_value, list) and first_call:
         if len(one_value) > 1:
+            return False
+        return attribute_as_list_format_is_correct(one_value[0], False)
+    else:
+        if not isinstance(one_value, AUTHORIZED_ATTRIBUTE_VALUE_TYPE):
             return False
     return True
 
