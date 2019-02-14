@@ -105,14 +105,14 @@ def run_module():
         state=dict(default='present', choices=['present', 'absent']),
         realm=dict(default='master'),
 
-        keycloak_username=dict(type='str'),
+        keycloak_username=dict(type='str', aliases=['keycloakUsername']),
         id=dict(type='str'),
 
-        email_verified=dict(type='bool'),
+        email_verified=dict(type='bool', aliases=['emailVerified']),
         enabled=dict(type='bool'),
-        keycloak_attributes=dict(type='dict'),
+        keycloak_attributes=dict(type='dict', aliases=['keycloakAttributes']),
         email=dict(type='str'),
-        required_actions=dict(type='list')
+        required_actions=dict(type='list', aliases=['requiredActions'])
     )
 
     argument_spec.update(meta_args)
