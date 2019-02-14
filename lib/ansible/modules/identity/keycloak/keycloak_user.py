@@ -271,46 +271,6 @@ def run_module():
             deleting_user(kc, result, realm, given_user_id)
 
 
-def create_result(before_user, module):
-    changeset = create_changeset(module)
-    result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
-                  end_state={})
-    result['proposed'] = changeset
-    result['existing'] = before_user
-    return result
-
-
-def create_changeset(module):
-    user_params = [
-        x for x in module.params
-        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
-        module.params.get(x) is not None]
-    changeset = dict()
-    for user_param in user_params:
-        new_param_value = module.params.get(user_param)
-
-        # some lists in the Keycloak API are sorted, some are not.
-        if isinstance(new_param_value, list):
-            if user_param in ['attributes']:
-                try:
-                    new_param_value = sorted(new_param_value)
-                except TypeError:
-                    pass
-
-        changeset[camel(user_param)] = new_param_value
-    return changeset
-
-
-def get_initial_user(given_user_id, kc, realm):
-    if 'name' in given_user_id:
-        before_user = kc.get_user_by_name(given_user_id['name'], realm=realm)
-    else:
-        before_user = kc.get_user_by_id(given_user_id['id'], realm=realm)
-    if before_user is None:
-        before_user = dict()
-    return before_user
-
-
 def attributes_format_is_correct(given_attributes):
     if not given_attributes:
         return True
@@ -350,6 +310,46 @@ def required_actions_are_in_authorized_list(given_required_actions):
     return True
 
 
+def get_initial_user(given_user_id, kc, realm):
+    if 'name' in given_user_id:
+        before_user = kc.get_user_by_name(given_user_id['name'], realm=realm)
+    else:
+        before_user = kc.get_user_by_id(given_user_id['id'], realm=realm)
+    if before_user is None:
+        before_user = dict()
+    return before_user
+
+
+def create_result(before_user, module):
+    changeset = create_changeset(module)
+    result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
+                  end_state={})
+    result['proposed'] = changeset
+    result['existing'] = before_user
+    return result
+
+
+def create_changeset(module):
+    user_params = [
+        x for x in module.params
+        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
+        module.params.get(x) is not None]
+    changeset = dict()
+    for user_param in user_params:
+        new_param_value = module.params.get(user_param)
+
+        # some lists in the Keycloak API are sorted, some are not.
+        if isinstance(new_param_value, list):
+            if user_param in ['attributes']:
+                try:
+                    new_param_value = sorted(new_param_value)
+                except TypeError:
+                    pass
+
+        changeset[camel(user_param)] = new_param_value
+    return changeset
+
+
 def do_nothing_and_exit(kc, result):
     module = kc.module
     if module._diff:
@@ -358,26 +358,21 @@ def do_nothing_and_exit(kc, result):
     module.exit_json(**result)
 
 
-def deleting_user(kc, result, realm, given_user_id):
+def create_user(kc, result, realm, given_user_id):
     module = kc.module
-    before_user = result['existing']
-    result['proposed'] = {}
+    user_to_create = result['proposed']
     result['changed'] = True
+
     if module._diff:
-        result['diff']['before'] = sanitize_user_representation(
-            before_user)
-        result['diff']['after'] = ''
+        result['diff'] = dict(before='',
+                              after=sanitize_user_representation(user_to_create))
     if module.check_mode:
         module.exit_json(**result)
-    if 'name' in given_user_id:
-        asked_id = kc.get_user_id(given_user_id['name'], realm=realm)
-    else:
-        asked_id = given_user_id['id']
-    kc.delete_user(asked_id, realm=realm)
-    result['proposed'] = dict()
-    result['end_state'] = dict()
-    result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[
-        0]
+
+    response = kc.create_user(user_to_create, realm=realm)
+    after_user = kc.get_json_from_url(response.headers.get('Location'))
+    result['end_state'] = sanitize_user_representation(after_user)
+    result['msg'] = 'User %s has been created.' % given_user_id['name']
     module.exit_json(**result)
 
 
@@ -418,21 +413,26 @@ def updating_user(kc, result, realm, given_user_id):
     module.exit_json(**result)
 
 
-def create_user(kc, result, realm, given_user_id):
+def deleting_user(kc, result, realm, given_user_id):
     module = kc.module
-    user_to_create = result['proposed']
+    before_user = result['existing']
+    result['proposed'] = {}
     result['changed'] = True
-
     if module._diff:
-        result['diff'] = dict(before='',
-                              after=sanitize_user_representation(user_to_create))
+        result['diff']['before'] = sanitize_user_representation(
+            before_user)
+        result['diff']['after'] = ''
     if module.check_mode:
         module.exit_json(**result)
-
-    response = kc.create_user(user_to_create, realm=realm)
-    after_user = kc.get_json_from_url(response.headers.get('Location'))
-    result['end_state'] = sanitize_user_representation(after_user)
-    result['msg'] = 'User %s has been created.' % given_user_id['name']
+    if 'name' in given_user_id:
+        asked_id = kc.get_user_id(given_user_id['name'], realm=realm)
+    else:
+        asked_id = given_user_id['id']
+    kc.delete_user(asked_id, realm=realm)
+    result['proposed'] = dict()
+    result['end_state'] = dict()
+    result['msg'] = 'User %s has been deleted.' % list(given_user_id.values())[
+        0]
     module.exit_json(**result)
 
 
