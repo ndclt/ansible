@@ -406,7 +406,7 @@ def test_correct_attributes_type_should_pass(monkeypatch, url_for_fake_update):
         'keycloak_username': 'user1',
         'attributes': {
             'int': 1, 'str': 'some text', 'float': 0.1, 'bool': True},
-        'required_actions': [('CONFIGURE_TOPT'), ('UPDATE_PASSWORD'), ('UPDATE_PROFILE'), ('VERIFY_EMAIL')]
+        'required_actions': ['CONFIGURE_TOTP', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson):
@@ -438,5 +438,5 @@ def test_wrong_required_actions_should_raise_errors(monkeypatch, wrong_required_
         keycloak_user.main()
     ansible_failed_json = exec_error.value.args[0]
     assert ansible_failed_json['msg'] == (
-        'Required actions can only have the following values: CONFIGURE_TOPT, '
+        'Required actions can only have the following values: CONFIGURE_TOTP, '
         'UPDATE_PASSWORD, UPDATE_PROFILE, VERIFY_EMAIL')

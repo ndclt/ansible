@@ -122,7 +122,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 
 AUTHORIZED_REQUIRED_ACTIONS = [
-    'CONFIGURE_TOPT', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
+    'CONFIGURE_TOTP', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
 # is this compatible with native string stategy?
 AUTHORIZED_ATTRIBUTE_VALUE_TYPE = (str, int, float, bool)
 
