@@ -156,17 +156,14 @@ def run_module():
     # If the user does not exist yet, before_user is still empty
     if before_user == dict():
         if state == 'absent':
-            # do nothing and exit
             do_nothing_and_exit(module, result)
 
         create_user(given_user_id, kc, module, realm, result, updated_user)
     else:
         if state == 'present':
-            # update existing user
             updating_user(before_user, changeset, given_user_id, kc, module,
                           realm, result, updated_user)
         else:
-            # Delete existing user
             deleting_user(before_user, given_user_id, kc, module, realm,
                           result, updated_user)
 
