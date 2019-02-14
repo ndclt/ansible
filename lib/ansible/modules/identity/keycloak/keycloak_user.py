@@ -143,7 +143,7 @@ def run_module():
     kc = KeycloakAPI(module)
     before_user = get_initial_user(given_user_id, kc, realm)
 
-    changeset, result, updated_user = create_result(before_user, module)
+    result = create_result(before_user, module)
 
     # If the user does not exist yet, before_user is still empty
     if before_user == dict():
@@ -160,13 +160,11 @@ def run_module():
 
 def create_result(before_user, module):
     changeset = create_changeset(module)
-    updated_user = before_user.copy()
-    updated_user.update(changeset)
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
                   end_state={})
     result['proposed'] = changeset
     result['existing'] = before_user
-    return changeset, result, updated_user
+    return result
 
 
 def create_changeset(module):
