@@ -270,6 +270,7 @@ def deleting_user(before_user, given_user_id, kc, module, realm, result,
 def updating_user(before_user, changeset, given_user_id, kc, module, realm,
                   result, updated_user):
     result['changed'] = True
+
     if module.check_mode:
         # We can only compare the current user with the proposed updates we have
         if module._diff:
@@ -277,20 +278,23 @@ def updating_user(before_user, changeset, given_user_id, kc, module, realm,
                 before=sanitize_user_representation(before_user),
                 after=sanitize_user_representation(updated_user))
         result['changed'] = (before_user != updated_user)
-
         module.exit_json(**result)
+
     if 'name' in given_user_id.keys():
         asked_id = kc.get_user_id(updated_user['username'], realm=realm)
     else:
         asked_id = given_user_id['id']
+
     kc.update_user(asked_id, changeset, realm=realm)
     after_user = kc.get_user_by_id(asked_id, realm=realm)
     if before_user == after_user:
         result['changed'] = False
+
     if module._diff:
         result['diff'] = dict(
             before=sanitize_user_representation(before_user),
             after=sanitize_user_representation(after_user))
+        
     result['end_state'] = sanitize_user_representation(after_user)
     result['msg'] = 'User %s has been updated.' % list(given_user_id.values())[
         0]
@@ -300,11 +304,13 @@ def updating_user(before_user, changeset, given_user_id, kc, module, realm,
 def create_user(given_user_id, kc, module, realm, result):
     user_to_create = result['proposed']
     result['changed'] = True
+
     if module._diff:
         result['diff'] = dict(before='',
                               after=sanitize_user_representation(user_to_create))
     if module.check_mode:
         module.exit_json(**result)
+
     response = kc.create_user(user_to_create, realm=realm)
     after_user = kc.get_json_from_url(response.headers.get('Location'))
     result['end_state'] = sanitize_user_representation(after_user)
