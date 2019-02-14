@@ -97,20 +97,15 @@ author:
 
 EXAMPLES = '''
 # Pass in a message
-- name: Test with a message
-  my_new_test_module:
-    name: hello world
-
-# pass in a message and have changed true
-- name: Test with a message and changed output
-  my_new_test_module:
-    name: hello world
-    new: true
-
-# fail the module
-- name: Test failure of the module
-  my_new_test_module:
-    name: fail me
+- name: Create or update Keycloak users template (minimal)
+  local_action:
+    module: keycloak_user
+    auth_client_id: admin-cli
+    auth_keycloak_url: http://localhost:8080/auth
+    auth_realm: master
+    auth_username: nd
+    auth_password: nd
+    keycloak_username: userTest1
 '''
 
 RETURN = '''
