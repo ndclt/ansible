@@ -62,6 +62,7 @@ options:
     keycloak_username
         description:
             - username of client to be worked on. This and I(user_id) are mutually exclusive.
+            - keycloak lower the username
     
     email_verified
         description:
@@ -171,6 +172,8 @@ def run_module():
     if not given_user_id['name']:
         given_user_id.update({'id': module.params.get('user_id')})
         given_user_id.pop('name')
+    else:
+        given_user_id.update({'name': given_user_id['name'].lower()})
 
     if not attributes_format_is_correct(module.params.get('attributes')):
         module.fail_json(msg=(
