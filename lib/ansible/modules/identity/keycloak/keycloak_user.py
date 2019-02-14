@@ -151,7 +151,7 @@ def run_module():
         if state == 'absent':
             do_nothing_and_exit(module, result)
 
-        create_user(given_user_id, kc, module, realm, result, updated_user)
+        create_user(given_user_id, kc, module, realm, result)
     else:
         if state == 'present':
             updating_user(before_user, changeset, given_user_id, kc, module,
@@ -297,8 +297,8 @@ def updating_user(before_user, changeset, given_user_id, kc, module, realm,
     module.exit_json(**result)
 
 
-def create_user(given_user_id, kc, module, realm, result, updated_user):
-    # create new user
+def create_user(given_user_id, kc, module, realm, result):
+    updated_user = result['proposed']
     result['changed'] = True
     if module._diff:
         result['diff'] = dict(before='',
