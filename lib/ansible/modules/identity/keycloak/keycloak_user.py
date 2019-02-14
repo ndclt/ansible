@@ -298,14 +298,14 @@ def updating_user(before_user, changeset, given_user_id, kc, module, realm,
 
 
 def create_user(given_user_id, kc, module, realm, result):
-    updated_user = result['proposed']
+    user_to_create = result['proposed']
     result['changed'] = True
     if module._diff:
         result['diff'] = dict(before='',
-                              after=sanitize_user_representation(updated_user))
+                              after=sanitize_user_representation(user_to_create))
     if module.check_mode:
         module.exit_json(**result)
-    response = kc.create_user(updated_user, realm=realm)
+    response = kc.create_user(user_to_create, realm=realm)
     after_user = kc.get_json_from_url(response.headers.get('Location'))
     result['end_state'] = sanitize_user_representation(after_user)
     result['msg'] = 'User %s has been created.' % given_user_id['name']
