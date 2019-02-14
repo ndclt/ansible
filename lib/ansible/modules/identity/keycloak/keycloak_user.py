@@ -154,8 +154,7 @@ def run_module():
         create_user(given_user_id, kc, module, realm, result)
     else:
         if state == 'present':
-            updating_user(before_user, changeset, given_user_id, kc, module,
-                          realm, result, updated_user)
+            updating_user(given_user_id, kc, module, realm, result)
         else:
             deleting_user(before_user, given_user_id, kc, module, realm,
                           result, updated_user)
@@ -267,8 +266,11 @@ def deleting_user(before_user, given_user_id, kc, module, realm, result,
     module.exit_json(**result)
 
 
-def updating_user(before_user, changeset, given_user_id, kc, module, realm,
-                  result, updated_user):
+def updating_user(given_user_id, kc, module, realm, result):
+    changeset = result['proposed']
+    before_user = result['existing']
+    updated_user = before_user.copy()
+    updated_user.update(changeset)
     result['changed'] = True
 
     if module.check_mode:
@@ -281,7 +283,7 @@ def updating_user(before_user, changeset, given_user_id, kc, module, realm,
         module.exit_json(**result)
 
     if 'name' in given_user_id.keys():
-        asked_id = kc.get_user_id(updated_user['username'], realm=realm)
+        asked_id = kc.get_user_id(given_user_id['name'], realm=realm)
     else:
         asked_id = given_user_id['id']
 
@@ -294,7 +296,7 @@ def updating_user(before_user, changeset, given_user_id, kc, module, realm,
         result['diff'] = dict(
             before=sanitize_user_representation(before_user),
             after=sanitize_user_representation(after_user))
-        
+
     result['end_state'] = sanitize_user_representation(after_user)
     result['msg'] = 'User %s has been updated.' % list(given_user_id.values())[
         0]
