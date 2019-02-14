@@ -141,7 +141,6 @@ def run_module():
             'Required actions can only have the following values: {0}'.format(
                 ', '.join(AUTHORIZED_REQUIRED_ACTIONS))))
 
-
     kc = KeycloakAPI(module)
     before_user = get_initial_user(given_user_id, kc, realm)
 
@@ -156,17 +155,13 @@ def run_module():
     # If the user does not exist yet, before_user is still empty
     if before_user == dict():
         if state == 'absent':
-            # do nothing and exit
             do_nothing_and_exit(module, result)
-
         create_user(given_user_id, kc, module, realm, result, updated_user)
     else:
         if state == 'present':
-            # update existing user
-            updating_user(before_user, changeset, given_user_id, kc, module,
-                          realm, result, updated_user)
+            updating_user(before_user, given_user_id, kc, module, realm,
+                          result, updated_user)
         else:
-            # Delete existing user
             deleting_user(before_user, given_user_id, kc, module, realm,
                           result, updated_user)
 
@@ -266,8 +261,9 @@ def deleting_user(before_user, given_user_id, kc, module, realm, result,
     module.exit_json(**result)
 
 
-def updating_user(before_user, changeset, given_user_id, kc, module, realm,
-                  result, updated_user):
+def updating_user(before_user, given_user_id, kc, module, realm, result,
+                  updated_user):
+    changeset = create_changeset(module)
     result['changed'] = True
     if module.check_mode:
         # We can only compare the current user with the proposed updates we have
