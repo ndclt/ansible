@@ -406,7 +406,7 @@ def test_correct_attributes_type_should_pass(monkeypatch, url_for_fake_update):
         'keycloak_username': 'user1',
         'attributes': {
             'int': 1, 'str': 'some text', 'float': 0.1, 'bool': True},
-        'required_actions': ['CONFIGURE_TOPT', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
+        'required_actions': [('CONFIGURE_TOPT'), ('UPDATE_PASSWORD'), ('UPDATE_PROFILE'), ('VERIFY_EMAIL')]
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson):
@@ -418,8 +418,10 @@ def test_correct_attributes_type_should_pass(monkeypatch, url_for_fake_update):
     [1, 'UPDATE_PASSWORD'],
     1,
     'not in the list',
+    ['CONFIGURE_TOPT', 'UPDATE_PASSWORD']
 ], ids=['string not in the list', 'integer instead of string in a list',
-        'integer alone instead of a string', 'string alone not in the list'])
+        'integer alone instead of a string', 'string alone not in the list',
+        'list instead of list of tuples'])
 def test_wrong_required_actions_should_raise_errors(monkeypatch, wrong_required_actions):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
