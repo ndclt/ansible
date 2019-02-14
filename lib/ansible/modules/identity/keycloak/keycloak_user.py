@@ -256,7 +256,10 @@ def deleting_user(kc, result, realm, given_user_id):
         result['diff']['after'] = ''
     if module.check_mode:
         module.exit_json(**result)
-    asked_id = kc.get_user_id(before_user['username'], realm=realm)
+    if 'name' in given_user_id:
+        asked_id = kc.get_user_id(given_user_id['name'], realm=realm)
+    else:
+        asked_id = given_user_id['id']
     kc.delete_user(asked_id, realm=realm)
     result['proposed'] = dict()
     result['end_state'] = dict()
