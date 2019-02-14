@@ -122,7 +122,6 @@ def run_module():
                            required_one_of=([['keycloak_username', 'id']]),
                            mutually_exclusive=[['keycloak_username', 'id']]
                            )
-    result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
     realm = module.params.get('realm')
     state = module.params.get('state')
@@ -149,6 +148,7 @@ def run_module():
     updated_user = before_user.copy()
     updated_user.update(changeset)
 
+    result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
     result['proposed'] = changeset
     result['existing'] = before_user
 
