@@ -24,7 +24,7 @@ description:
     - "This is my longer description explaining my sample module"
 
 options:
-    name:
+    state:
         description:
             - This is the message to send to the sample module
         required: true
@@ -110,7 +110,7 @@ def run_module():
 
         email_verified=dict(type='bool', aliases=['emailVerified']),
         enabled=dict(type='bool'),
-        keycloak_attributes=dict(type='dict', aliases=['keycloakAttributes']),
+        attributes=dict(type='dict'),
         email=dict(type='str'),
         required_actions=dict(type='list', aliases=['requiredActions'])
     )
@@ -130,7 +130,7 @@ def run_module():
         given_user_id.update({'id': module.params.get('user_id')})
         given_user_id.pop('name')
 
-    if not attributes_format_is_correct(module.params.get('keycloak_attributes')):
+    if not attributes_format_is_correct(module.params.get('attributes')):
         module.fail_json(msg=(
             'Attributes are not in the correct format. Should be a dictionary with '
             'one value per key as string, integer and boolean'))

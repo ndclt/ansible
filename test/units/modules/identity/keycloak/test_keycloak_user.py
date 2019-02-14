@@ -365,7 +365,7 @@ def test_wrong_attributes_type_should_raise_an_error(monkeypatch, wrong_attribut
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'keycloak_username': 'user1',
-        'keycloak_attributes': wrong_attributes
+        'attributes': wrong_attributes
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleFailJson) as exec_error:
@@ -402,7 +402,7 @@ def test_correct_attributes_type_should_pass(monkeypatch, url_for_fake_update):
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'keycloak_username': 'user1',
-        'keycloak_attributes': {
+        'attributes': {
             'int': 1, 'str': 'some text', 'float': 0.1, 'bool': True},
         'required_actions': ['CONFIGURE_TOPT', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
     }
