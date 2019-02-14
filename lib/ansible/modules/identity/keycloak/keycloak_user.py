@@ -78,8 +78,11 @@ options:
     
     email
         description:
-            - the user email.
-            - there is no check about the validity of the email in keycloak nor in this module.
+            - the user email
+            - this module does not check the validity of the email
+            - when using the api, there is no check about the validity of the email in keycloak
+            - but with manual action, the format is checked
+            
         required: false
         type: bool
         
@@ -87,7 +90,15 @@ options:
         description:
             - a list of actions to be done by the user
             — each element must be in the choices
-        choices: ['CONFIGURE_TOPT', 'UPDATE_PASSWORD', 'UPDATE_PROFILE', 'VERIFY_EMAIL']
+        choices: ['UPDATE_PROFILE', 'VERIFY_EMAIL', 'UPDATE_PASSWORD', 'CONFIGURE_TOTP']
+        
+    first_name:
+        description:
+            - the user first name
+    
+    last_name:
+        description:
+            - the user last name 
 
 extends_documentation_fragment:
     - keycloak
@@ -107,14 +118,69 @@ EXAMPLES = '''
     auth_username: nd
     auth_password: nd
     keycloak_username: userTest1
+- name: Delete previous user
+  local_action:
+    module: keycloak_user
+    auth_client_id: admin-cli
+    auth_keycloak_url: http://localhost:8080/auth
+    auth_realm: master
+    auth_username: nd
+    auth_password: nd
+    keycloak_username: userTest1
+    state: absent
+- name: Update keycloak user with all options
+  local_action:
+    module: keycloak_user
+    auth_client_id: admin-cli
+    auth_keycloak_url: http://localhost:8080/auth
+    auth_realm: master
+    auth_username: nd
+    auth_password: nd
+    keycloak_username: userTest1
+    email_verified: True
+    enabled: True
+    email: userTest@domain.org
+    first_name: user
+    last_name: test
+    required_actions: ['UPDATE_PROFILE', 'CONFIGURE_TOTP']
+    attributes: {'one key': 'one value', 'another key': 42}
 '''
 
 RETURN = '''
-original_message:
-    description: The original name param that was passed in
-    type: str
-message:
-    description: The output message that the sample module generates
+msg:
+  description: Message as to what action was taken
+  returned: always
+  type: str
+  sample: "User usertest1 has been updated"
+
+proposed:
+    description: user representation of proposed changes to user
+    returned: always
+    type: dict
+    sample: {
+      "email": "userTest1@domain.org",
+      "attributes": {"onekey": "RS256"}
+    }
+existing:
+    description: client representation of existing client (sample is truncated)
+    returned: always
+    type: dict
+    sample: {
+        "enabled": false,
+        "attributes": {
+            "onekey": ["RS256"],
+        }
+    }
+end_state:
+    description: client representation of client after module execution (sample is truncated)
+    returned: always
+    type: dict
+    sample: {
+        "enabled": false,
+        "attributes": {
+            "onekey": ["RS256"],
+        }
+    }
 '''
 
 from ansible.module_utils.keycloak import KeycloakAPI, camel, keycloak_argument_spec
@@ -155,6 +221,8 @@ def run_module():
         enabled=dict(type='bool'),
         attributes=dict(type='dict'),
         email=dict(type='str'),
+        first_name=dict(type='str', aliases=['firstName']),
+        last_name=dict(type='str', aliases=['lastName']),
         required_actions=dict(type='list', aliases=['requiredActions'])
     )
 
@@ -334,7 +402,6 @@ def updating_user(kc, result, realm, given_user_id):
         asked_id = kc.get_user_id(given_user_id['name'], realm=realm)
     else:
         asked_id = given_user_id['id']
-
     kc.update_user(asked_id, changeset, realm=realm)
     after_user = kc.get_user_by_id(asked_id, realm=realm)
     if before_user == after_user:
