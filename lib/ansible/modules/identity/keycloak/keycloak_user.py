@@ -148,14 +148,14 @@ def run_module():
     # If the user does not exist yet, before_user is still empty
     if before_user == dict():
         if state == 'absent':
-            do_nothing_and_exit(result, kc)
+            do_nothing_and_exit(kc, result)
 
-        create_user(given_user_id, kc, realm, result)
+        create_user(kc, result, realm, given_user_id)
     else:
         if state == 'present':
-            updating_user(given_user_id, kc, realm, result)
+            updating_user(kc, result, realm, given_user_id)
         else:
-            deleting_user(given_user_id, kc, realm, result)
+            deleting_user(kc, result, realm, given_user_id)
 
 
 def create_result(before_user, module):
@@ -239,7 +239,7 @@ def required_actions_are_in_authorized_list(given_required_actions):
     return True
 
 
-def do_nothing_and_exit(result, kc):
+def do_nothing_and_exit(kc, result):
     module = kc.module
     if module._diff:
         result['diff'] = dict(before='', after='')
@@ -247,7 +247,7 @@ def do_nothing_and_exit(result, kc):
     module.exit_json(**result)
 
 
-def deleting_user(given_user_id, kc, realm, result):
+def deleting_user(kc, result, realm, given_user_id):
     module = kc.module
     before_user = result['existing']
     result['proposed'] = {}
@@ -267,7 +267,7 @@ def deleting_user(given_user_id, kc, realm, result):
     module.exit_json(**result)
 
 
-def updating_user(given_user_id, kc, realm, result):
+def updating_user(kc, result, realm, given_user_id):
     module = kc.module
     changeset = result['proposed']
     before_user = result['existing']
@@ -305,7 +305,7 @@ def updating_user(given_user_id, kc, realm, result):
     module.exit_json(**result)
 
 
-def create_user(given_user_id, kc, realm, result):
+def create_user(kc, result, realm, given_user_id):
     module = kc.module
     user_to_create = result['proposed']
     result['changed'] = True
