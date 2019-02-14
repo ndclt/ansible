@@ -140,7 +140,6 @@ def run_module():
             'Required actions can only have the following values: {0}'.format(
                 ', '.join(AUTHORIZED_REQUIRED_ACTIONS))))
 
-
     kc = KeycloakAPI(module)
     before_user = get_initial_user(given_user_id, kc, realm)
 
@@ -156,8 +155,7 @@ def run_module():
         if state == 'present':
             updating_user(given_user_id, kc, module, realm, result)
         else:
-            deleting_user(before_user, given_user_id, kc, module, realm,
-                          result, updated_user)
+            deleting_user(given_user_id, kc, module, realm, result)
 
 
 def create_result(before_user, module):
@@ -248,8 +246,9 @@ def do_nothing_and_exit(module, result):
     module.exit_json(**result)
 
 
-def deleting_user(before_user, given_user_id, kc, module, realm, result,
-                  updated_user):
+def deleting_user(given_user_id, kc, module, realm, result):
+    before_user = result['existing']
+    result['proposed'] = {}
     result['changed'] = True
     if module._diff:
         result['diff']['before'] = sanitize_user_representation(
@@ -257,7 +256,7 @@ def deleting_user(before_user, given_user_id, kc, module, realm, result,
         result['diff']['after'] = ''
     if module.check_mode:
         module.exit_json(**result)
-    asked_id = kc.get_user_id(updated_user['username'], realm=realm)
+    asked_id = kc.get_user_id(before_user['username'], realm=realm)
     kc.delete_user(asked_id, realm=realm)
     result['proposed'] = dict()
     result['end_state'] = dict()
