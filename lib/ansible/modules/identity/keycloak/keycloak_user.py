@@ -106,7 +106,7 @@ def run_module():
         realm=dict(default='master'),
 
         keycloak_username=dict(type='str', aliases=['keycloakUsername']),
-        id=dict(type='str'),
+        user_id=dict(type='str', aliases=['userId']),
 
         email_verified=dict(type='bool', aliases=['emailVerified']),
         enabled=dict(type='bool'),
@@ -119,15 +119,15 @@ def run_module():
 
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
-                           required_one_of=([['keycloak_username', 'id']]),
-                           mutually_exclusive=[['keycloak_username', 'id']]
+                           required_one_of=([['keycloak_username', 'user_id']]),
+                           mutually_exclusive=[['keycloak_username', 'user_id']]
                            )
 
     realm = module.params.get('realm')
     state = module.params.get('state')
     given_user_id = {'name': module.params.get('keycloak_username')}
     if not given_user_id['name']:
-        given_user_id.update({'id': module.params.get('id')})
+        given_user_id.update({'id': module.params.get('user_id')})
         given_user_id.pop('name')
 
     if not attributes_format_is_correct(module.params.get('keycloak_attributes')):

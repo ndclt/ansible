@@ -263,7 +263,7 @@ def test_state_present_should_create_absent_user(monkeypatch, url_mock_keycloak)
 
 @pytest.mark.parametrize('user_to_delete', [
     {'keycloak_username': 'to_delete'},
-    {'id': '994eeb5e-62e1-4bb9-8cb7-667f53e62f01'},
+    {'user_id': '994eeb5e-62e1-4bb9-8cb7-667f53e62f01'},
 ], ids=['with name', 'with id'])
 def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak, user_to_delete):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
@@ -285,7 +285,7 @@ def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak
 
 @pytest.fixture(params=[
     {'keycloak_username': 'user1'},
-    {'id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'}], ids=['with name', 'with_id'])
+    {'user_id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'}], ids=['with name', 'with_id'])
 def build_user_update_request(request):
     new_response_dictionary = RESPONSE_ADMIN_ONLY.copy()
     if 'keycloak_username' in request.param.keys():
@@ -340,14 +340,14 @@ def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch):
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'keycloak_username': 'user1',
-        'id': '00000000-51d0-4aa9-8cb7-667f53e62e90',
+        'user_id': '00000000-51d0-4aa9-8cb7-667f53e62e90',
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleFailJson) as exec_error:
         keycloak_user.main()
     ansible_failed_json = exec_error.value.args[0]
     assert ansible_failed_json['msg'] == (
-        'parameters are mutually exclusive: keycloak_username, id')
+        'parameters are mutually exclusive: keycloak_username, user_id')
 
 
 @pytest.mark.parametrize('wrong_attributes', [
