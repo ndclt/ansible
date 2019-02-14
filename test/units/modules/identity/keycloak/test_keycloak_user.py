@@ -285,7 +285,9 @@ def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak
 
 @pytest.fixture(params=[
     {'keycloak_username': 'user1'},
-    {'user_id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'}], ids=['with name', 'with_id'])
+    {'user_id': '883eeb5e-51d0-4aa9-8cb7-667f53e62e90'},
+    {'keycloak_username': 'UsEr1'},
+], ids=['with name', 'with_id', 'name with upper case'])
 def build_user_update_request(request):
     new_response_dictionary = RESPONSE_ADMIN_ONLY.copy()
     if 'keycloak_username' in request.param.keys():
@@ -331,7 +333,7 @@ def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_for_
     with pytest.raises(AnsibleExitJson) as exec_error:
         keycloak_user.main()
     ansible_exit_json = exec_error.value.args[0]
-    assert ansible_exit_json['msg'] == ('User %s has been updated.' % list(user_to_update.values())[0])
+    assert ansible_exit_json['msg'] == ('User %s has been updated.' % list(user_to_update.values())[0].lower())
     assert ansible_exit_json['end_state'] == json.loads(UPDATED_USER)
 
 
