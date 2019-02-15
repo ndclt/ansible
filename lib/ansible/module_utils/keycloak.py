@@ -356,7 +356,7 @@ class KeycloakAPI(object):
 
         try:
             user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders,
-                                      validate_certs=self.validate_certs))
+                                           validate_certs=self.validate_certs))
             return user_json
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
@@ -404,7 +404,7 @@ class KeycloakAPI(object):
             return result['id']
         else:
             return None
-        
+
     def get_user_by_name(self, name, realm='master'):
         """ Obtain user representation by name
 
@@ -418,7 +418,7 @@ class KeycloakAPI(object):
             if len(result) > 0:
                 return result[0]
         return None
-    
+
     def create_user(self, user_representation, realm="master"):
         """ Create a user in keycloak
 
@@ -447,7 +447,7 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not create user %s in realm %s: %s'
                                       % (user_representation['username'], realm, str(e)),
                                   payload=user_representation)
-            
+
     def update_user(self, uuid, user_representation, realm="master"):
         """ Update an existing user
         :param uuid: id of user to be updated in Keycloak
@@ -481,7 +481,7 @@ class KeycloakAPI(object):
                 user_representation=user_representation,
                 user_url=user_url
             )
-            
+
     def delete_user(self, id, realm="master"):
         """ Delete a user from Keycloak
 
@@ -501,7 +501,7 @@ class KeycloakAPI(object):
     def get_json_from_url(self, url):
         try:
             user_json = json.load(open_url(url, method='GET', headers=self.restheaders,
-                                      validate_certs=self.validate_certs))
+                                           validate_certs=self.validate_certs))
             return user_json
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to get: %s' % (url))

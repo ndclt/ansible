@@ -7,10 +7,8 @@ import pytest
 
 from ansible.modules.identity.keycloak import keycloak_user
 from units.modules.utils import (
-    AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args, to_bytes)
-from ansible.module_utils.six import BytesIO
-from io import TextIOWrapper
-
+    AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args)
+from ansible.module_utils.six import StringIO
 
 LIST_USER_RESPONSE_ADMIN_ONLY = r"""[
   {
@@ -188,7 +186,11 @@ def get_response(object_with_future_response, method, get_id_call_count):
         return get_response(
             object_with_future_response[method], method, get_id_call_count)
     if isinstance(object_with_future_response, list):
-        call_number = get_id_call_count.__next__()
+        try:
+            call_number = get_id_call_count.__next__()
+        except AttributeError:
+            # manage python 2 versions.
+            call_number = get_id_call_count.next()
         return get_response(
             object_with_future_response[call_number], method, get_id_call_count)
     return object_with_future_response
@@ -202,10 +204,10 @@ class CreatedUserMockResponse(object):
 def create_wrapper(text_as_string):
     """Allow to mock many times a call to one address.
 
-    Without this function, the TextIOWrapper is empty for the second call.
+    Without this function, the StringIO is empty for the second call.
     """
     def _create_wrapper():
-        return TextIOWrapper(BytesIO(to_bytes(text_as_string)), encoding='utf8')
+        return StringIO(text_as_string)
     return _create_wrapper
 
 
@@ -269,12 +271,12 @@ def test_state_absent_should_delete_existing_user(monkeypatch, url_mock_keycloak
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-            'auth_keycloak_url': 'http://keycloak.url/auth',
-            'auth_username': 'test_admin',
-            'auth_password': 'admin_password',
-            'auth_realm': 'master',
-            'state': 'absent'
-        }
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'state': 'absent'
+    }
     arguments.update(user_to_delete)
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_error:
@@ -300,9 +302,10 @@ def build_user_update_request(request):
         new_response_dictionary .update({
             'http://keycloak.url/auth/admin/realms/master/users/883eeb5e-51d0-4aa9-8cb7-667f53e62e90': {
                 'PUT': None,
-                'GET': [create_wrapper(GET_USER_BY_ID),
-                        create_wrapper(UPDATED_USER)
-            ]}})
+                'GET': [
+                    create_wrapper(GET_USER_BY_ID),
+                    create_wrapper(UPDATED_USER)
+                ]}})
     return request.param, new_response_dictionary
 
 
@@ -317,17 +320,17 @@ def dynamic_url_for_user_update(mocker, build_user_update_request):
 
 
 def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_for_user_update):
-    user_to_update, _ = dynamic_url_for_user_update
+    user_to_update, dummy = dynamic_url_for_user_update
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-            'auth_keycloak_url': 'http://keycloak.url/auth',
-            'auth_username': 'test_admin',
-            'auth_password': 'admin_password',
-            'auth_realm': 'master',
-            'state': 'present',
-            'email': 'user1@domain.net'
-        }
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'state': 'present',
+        'email': 'user1@domain.net'
+    }
     arguments.update(user_to_update)
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_error:
