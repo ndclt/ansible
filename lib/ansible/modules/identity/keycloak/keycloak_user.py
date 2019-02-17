@@ -258,11 +258,6 @@ def run_module():
             'Attributes are not in the correct format. Should be a dictionary with '
             'one value per key as string, integer and boolean'))
 
-    if not required_actions_are_in_authorized_list(module.params.get('required_actions')):
-        module.fail_json(msg=(
-            'Required actions can only have the following values: {0}'.format(
-                ', '.join(AUTHORIZED_REQUIRED_ACTIONS))))
-
     kc = KeycloakAPI(module)
     before_user = get_initial_user(given_user_id, kc, realm)
 
@@ -303,19 +298,6 @@ def attribute_as_list_format_is_correct(one_value, first_call=True):
     else:
         if not isinstance(one_value, AUTHORIZED_ATTRIBUTE_VALUE_TYPE):
             return False
-    return True
-
-
-def required_actions_are_in_authorized_list(given_required_actions):
-    if not given_required_actions:
-        return True
-    if isinstance(given_required_actions, list):
-        for one_action in given_required_actions:
-            if one_action not in AUTHORIZED_REQUIRED_ACTIONS:
-                return False
-        return True
-    if given_required_actions not in AUTHORIZED_REQUIRED_ACTIONS:
-        return False
     return True
 
 
