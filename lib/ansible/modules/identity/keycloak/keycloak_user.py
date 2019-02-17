@@ -33,10 +33,18 @@ description:
       with ansible names or previous used names, they will be prefixed by "keycloak".
 
 options:
+    state:
+        description:
+            - State of the client
+            - On C(present), the client will be created (or updated if it exists already).
+            - On C(absent), the client will be removed if it exists
+        choices: ['present', 'absent']
+        default: 'present'
+
     realm:
         description:
             - The realm to create the client in.
-        default: "master"
+        default: 'master'
 
     attributes:
         description:
@@ -49,17 +57,23 @@ options:
         description:
             - user_id of client to be worked on. This is usually an UUID. This and I(client_username)
               are mutually exclusive.
+        aliases:
+            - userId
 
     keycloak_username:
         description:
             - username of client to be worked on. This and I(user_id) are mutually exclusive.
             - keycloak lower the username
+        aliases:
+            - keycloakUsername
 
     email_verified:
         description:
             - show if the user email have been verified
         required: false
         type: bool
+        aliases:
+            - emailVerified
 
     enabled:
         description:
@@ -80,14 +94,20 @@ options:
             - a list of actions to be done by the user
             - each element must be in the choices
         choices: ['UPDATE_PROFILE', 'VERIFY_EMAIL', 'UPDATE_PASSWORD', 'CONFIGURE_TOTP']
+        aliases:
+            - requiredActions
 
     first_name:
         description:
             - the user first name
+        aliases:
+            - firstName
 
     last_name:
         description:
             - the user last name
+        aliases:
+            - lastName
 
 extends_documentation_fragment:
     - keycloak
@@ -212,7 +232,8 @@ def run_module():
         email=dict(type='str'),
         first_name=dict(type='str', aliases=['firstName']),
         last_name=dict(type='str', aliases=['lastName']),
-        required_actions=dict(type='list', aliases=['requiredActions'])
+        required_actions=dict(type='list', aliases=['requiredActions'],
+                              choices=AUTHORIZED_REQUIRED_ACTIONS)
     )
 
     argument_spec.update(meta_args)
