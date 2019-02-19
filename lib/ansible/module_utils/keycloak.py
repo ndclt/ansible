@@ -344,7 +344,7 @@ class KeycloakAPI(object):
                                       % (id, realm, str(e)))
 
     def get_users(self, realm='master', filter=None):
-        """ Obtains client representations for clients in a realm
+        """ Obtains user representations for users in a realm
 
         :param realm: realm to be queried
         :param filter: if defined, only the user with userid specified in the filter is returned
@@ -366,12 +366,12 @@ class KeycloakAPI(object):
                                       % (realm, str(e)))
 
     def get_user_by_id(self, id, realm='master'):
-        """ Obtain client template representation by id
+        """ Obtain user representation by id
 
-                :param id: id (not name) of client template to be queried
-                :param realm: client template from this realm
-                :return: dict of client template representation or None if none matching exist
-                """
+        :param id: id (not name) of user to be queried
+        :param realm: realm to be queried
+        :return: dict of user representation or None if none matching exists
+        """
         url = URL_USER.format(url=self.baseurl, id=id, realm=realm)
 
         try:
@@ -396,7 +396,7 @@ class KeycloakAPI(object):
         """ Obtain user id by name
 
         :param name: name of user to be queried
-        :param realm: client template from this realm
+        :param realm: realm to be queried
         :return: user id (usually a UUID)
         """
         result = self.get_user_by_name(name, realm)
