@@ -1,4 +1,5 @@
 # Copyright (c) 2017, Eike Frost <ei@kefro.st>
+# -*- coding: utf-8 -*-
 #
 # This code is part of Ansible, but is an independent component.
 # This particular file snippet, and this file snippet only, is BSD licensed.
@@ -32,14 +33,18 @@ __metaclass__ = type
 import json
 
 from ansible.module_utils.urls import open_url
-from ansible.module_utils.six.moves.urllib.parse import urlencode
+from ansible.module_utils._text import to_text
+from ansible.module_utils.six.moves.urllib.parse import urlencode, quote
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 URL_TOKEN = "{url}/realms/{realm}/protocol/openid-connect/token"
 URL_CLIENT = "{url}/admin/realms/{realm}/clients/{id}"
 URL_CLIENTS = "{url}/admin/realms/{realm}/clients"
 URL_CLIENT_ROLES = "{url}/admin/realms/{realm}/clients/{id}/roles"
+URL_CLIENT_ROLE = "{url}/admin/realms/{realm}/clients/{id}/roles/{role_id}"
 URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
+URL_REALM_ROLE = "{url}/admin/realms/{realm}/roles/{role_id}"
+URL_REALM_ROLE_BY_ID = "{url}/admin/realms/{realm}/roles-by-id/{id}"
 
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
@@ -640,3 +645,116 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='API returned incorrect JSON when trying to get: %s' % (url))
         except Exception as e:
             self.module.fail_json(msg='Could not obtain url: %s' % (url))
+
+    def get_role_url(self, role_id, realm='master', client_uuid=None):
+        if 'name' in role_id:
+            role_name = role_id['name']
+            if client_uuid:
+                rolelist_url = URL_CLIENT_ROLE.format(
+                    url=self.baseurl, realm=quote(realm), id=client_uuid,
+                    role_id=quote(role_name))
+            else:
+                rolelist_url = URL_REALM_ROLE.format(
+                    url=self.baseurl, realm=quote(realm), role_id=quote(role_name))
+        else:
+            rolelist_url = URL_REALM_ROLE_BY_ID.format(
+                url=self.baseurl, realm=realm, id=role_id['uuid'])
+        return rolelist_url
+
+    def get_role(self, role_id, realm='master', client_uuid=None):
+        """ Obtain client template representation by id
+        :param role_id: id or name of role to be queried
+        :param realm: role from this realm
+        :return: dict of role representation or None if none matching exist
+        """
+        role_url = self.get_role_url(role_id, realm, client_uuid)
+
+        try:
+            return json.load(
+                open_url(role_url, method='GET', headers=self.restheaders,
+                         validate_certs=self.validate_certs))
+        except HTTPError as e:
+            if e.code == 404:
+                return None
+            else:
+                self.module.fail_json(
+                    msg='Could not obtain role %s for realm %s: %s'
+                        % (to_text(list(role_id.values())[0]), to_text(realm), to_text(e)))
+        except ValueError as e:
+            self.module.fail_json(
+                msg='API returned incorrect JSON when trying to obtain role %s for realm %s: %s'
+                    % (to_text(list(role_id.values())[0]), to_text(realm), to_text(e)))
+        except Exception as e:
+            self.module.fail_json(
+                msg='Could not obtain role %s for realm %s: %s'
+                    % (to_text(list(role_id.values())[0]),  to_text(realm), to_text(e)))
+
+    def delete_role(self, role_id, realm="master"):
+        """ Delete a role from Keycloak
+        :param role_id: id of role (uuid or name) to be deleted
+        :param realm: realm of role to be deleted
+        :return: HTTPResponse object on success
+        """
+        role_url = URL_REALM_ROLE_BY_ID.format(url=self.baseurl, realm=quote(realm), id=quote(role_id))
+
+        try:
+            return open_url(role_url, method='DELETE', headers=self.restheaders,
+                            validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(msg='Could not delete role %s in realm %s: %s'
+                                      % (role_id, realm, to_text(e)))
+
+    def get_role_id(self, name, realm='master', client_uuid=None):
+        """ Obtain role id by name
+        :param name: name of role to be queried
+        :param realm: realm to be queried
+        :return: role id (usually a UUID)
+        """
+        result = self.get_role(name, realm, client_uuid)
+        if isinstance(result, dict) and 'id' in result:
+            return result['id']
+        else:
+            return None
+
+    def create_role(self, role_representation, realm="master", client_uuid=None):
+        """ Create a role in keycloak
+        :param role_representation: role representation to be created.
+        :param realm: realm for role to be created
+        :return: HTTPResponse object on success
+        """
+        if client_uuid:
+            role_url = URL_CLIENT_ROLES.format(
+                url=self.baseurl, realm=quote(realm), id=client_uuid)
+            role_representation.pop('clientId')
+        else:
+            role_url = URL_REALM_ROLES.format(url=self.baseurl, realm=quote(realm))
+
+        try:
+            return open_url(role_url, method='POST', headers=self.restheaders,
+                            data=json.dumps(role_representation), validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(
+                msg='Could not create role %s in realm %s: %s'
+                    % (to_text(role_representation['name']), to_text(realm), to_text(e)),
+                payload=role_representation)
+
+    def update_role(self, role_id, role_representation, realm="master", client_uuid=None):
+        """ Update an existing role
+        :param role_id: id of role to be updated in Keycloak
+        :param role_representation: corresponding (partial/full) role representation with updates
+        :param realm: realm the role is in
+        :return: HTTPResponse object on success
+        """
+        role_url = self.get_role_url(role_id, realm, client_uuid)
+
+        try:
+            return open_url(role_url, method='PUT', headers=self.restheaders,
+                            data=json.dumps(role_representation),
+                            validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(
+                msg='Could not update role %s in realm %s: %s' % (
+                    to_text(list(role_id.values())[0]), to_text(realm), to_text(e)),
+                role_representation=role_representation,
+                role_url=role_url
+            )
