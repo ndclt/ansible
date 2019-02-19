@@ -44,6 +44,8 @@ URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
 
+URL_REALM_SCOPES = "{url}/admin/realms/{realm}/roles"
+
 
 def keycloak_argument_spec():
     """
@@ -339,3 +341,38 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(msg='Could not delete client template %s in realm %s: %s'
                                       % (id, realm, str(e)))
+
+    def get_roles(self, realm='master'):
+        """ Obtains client representations for clients in a realm
+        :param realm: realm to be queried
+        :param filter: if defined, only the user with userid specified in the filter is returned
+        :return: list of dicts of users representations
+        """
+        rolelist_url = URL_REALM_ROLES.format(url=self.baseurl, realm=realm)
+
+        try:
+            roles_json = json.load(open_url(rolelist_url, method='GET', headers=self.restheaders,
+                                           validate_certs=self.validate_certs))
+            return roles_json
+        except ValueError as e:
+            self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
+                                      % (realm, str(e)))
+        except Exception as e:
+            self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
+                                      % (realm, str(e)))
+
+    def get_role_by_name(self, name, realm='master'):
+        """ Obtain user representation by name
+        :param name: name of user to be queried
+        :param realm: user from this realm
+        :return: dict of user representation or None if none matching exist
+        """
+        result = self.get_roles(realm)
+        if isinstance(result, list):
+            result = [x for x in result if x['name'] == name]
+            if len(result) > 0:
+                return result[0]
+        return None
+
+    def get_role_by_id(self, role_id, realm='master'):
+        return None
