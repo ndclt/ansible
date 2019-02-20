@@ -27,7 +27,6 @@ def run_module():
         realm=dict(type='str', default='master'),
         name=dict(type='str'),
         id=dict(type='str'),
-        client_name=dict(type='str'),
         client_id=dict(type='str')
     )
 
@@ -42,9 +41,10 @@ def run_module():
     if not given_role_id['name']:
         given_role_id.update({'id': module.params.get('id')})
         given_role_id.pop('name')
+    client_id = module.params.get('client_id')
 
     kc = KeycloakAPI(module)
-    before_role = get_initial_role(given_role_id, kc, realm)
+    before_role = get_initial_role(given_role_id, kc, realm, client_id)
     result = create_result(before_role, module)
 
     if before_role == dict():
@@ -57,11 +57,15 @@ def run_module():
             deleting_role(kc, result, realm, given_role_id)
 
 
-def get_initial_role(given_user_id, kc, realm):
-    if 'name' in given_user_id:
-        before_user = kc.get_role_by_name(given_user_id['name'], realm=realm)
+def get_initial_role(given_user_id, kc, realm, client_id):
+    if client_id:
+        client_uuid = kc.get_client_id(client_id, realm)
     else:
-        before_user = kc.get_role_by_id(given_user_id['id'], realm=realm)
+        client_uuid = None
+    if 'name' in given_user_id:
+        before_user = kc.get_role_by_name(given_user_id['name'], realm=realm, client_uuid=client_uuid)
+    else:
+        before_user = kc.get_role_by_id(given_user_id['id'], realm=realm, client_uuid=client_uuid)
     if before_user is None:
         before_user = dict()
     return before_user

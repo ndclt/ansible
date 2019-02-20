@@ -83,20 +83,20 @@ def mock_absent_role_url(mocker):
      'Client absent-client does not exists, cannot found role absent in it'),
     ({'client_id': 'client-with-role', 'name': 'absent'},
      'Role absent does not exist in client-with-role client'),
-    ({'client_name': 'Client with role', 'id': '00000000-0000-0000-0000-000000000000'},
+    ({'client_id': 'client-with-role', 'id': '00000000-0000-0000-0000-000000000000'},
      'Role 00000000-0000-0000-0000-000000000000 does not exist in client-with-role client'),
 ], ids=['with name', 'with id', 'role in client, client does not exist',
         'role name in client with id', 'role id in client with id'])
 def test_state_absent_should_not_create_absent_role(
-        monkeypatch, role_identifier, error_message, mock_absent_role_url):
+        monkeypatch, role_identifier, error_message):
     """This function mainly test the get_initial_role and do_nothing_and_exit functions
     """
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        'auth_keycloak_url': 'http://keycloak.url/auth',
-        'auth_username': 'test_admin',
-        'auth_password': 'admin_password',
+        'auth_keycloak_url': 'http://localhost:8080/auth',
+        'auth_username': 'nd',
+        'auth_password': 'nd',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent'
