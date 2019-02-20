@@ -100,3 +100,43 @@ def test_state_absent_should_not_create_absent_role(
         keycloak_roles.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'Role does not exist, doing nothing.'
+
+
+@pytest.fixture
+def mock_delete_role_url(mocker):
+    absent_role_url = CONNECTION_DICT.copy()
+    existing_role = DEFAULT_ROLES.copy()
+    existing_role.append({
+        'id': 'cccccccc-d943-4274-9953-8b6a930ee74e', 'name': 'to delete',
+        'description': 'to be deleted during test', 'composite': False,
+        'clientRole': False, 'containerId': 'master'},)
+    absent_role_url.update({
+        'http://keycloak.url/auth/admin/realms/master/roles': create_wrapper(json.dumps(existing_role)),
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/cccccccc-d943-4274-9953-8b6a930ee74e': None
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), absent_role_url),
+        autospec=True
+    )
+
+
+def test_state_absent_with_existing_role_should_delete_the_role(
+        monkeypatch, mock_delete_role_url):
+    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'absent',
+        'name': 'to delete'
+    }
+    set_module_args(arguments)
+
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_roles.run_module()
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == 'Role to delete has been deleted.'

@@ -47,6 +47,11 @@ def run_module():
     if before_role == dict():
         if state == 'absent':
             do_nothing_and_exit(kc, result)
+    else:
+        if state == 'present':
+            pass
+        else:
+            deleting_role(kc, result, realm, given_role_id)
 
 
 def get_initial_role(given_user_id, kc, realm):
@@ -96,6 +101,10 @@ def do_nothing_and_exit(kc, result):
         result['diff'] = dict(before='', after='')
     result['msg'] = 'Role does not exist, doing nothing.'
     module.exit_json(**result)
+
+
+def deleting_role(kc, result, realm, given_role_id):
+    pass
 
 
 if __name__ == '__main__':
