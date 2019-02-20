@@ -9,6 +9,7 @@ from ansible.module_utils.six import StringIO
 from ansible.modules.identity.keycloak import keycloak_roles
 from units.modules.utils import (
     AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args)
+from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 
 def create_wrapper(text_as_string):
@@ -62,9 +63,11 @@ def get_response(object_with_future_response, method, get_id_call_count):
 @pytest.fixture
 def mock_absent_role_url(mocker):
     absent_role_url = CONNECTION_DICT.copy()
-    absent_role_url.update(
-        {'http://keycloak.url/auth/admin/realms/master/roles': create_wrapper(json.dumps(DEFAULT_ROLES))}
-    )
+    absent_role_url.update({
+        'http://keycloak.url/auth/admin/realms/master/roles': create_wrapper(json.dumps(DEFAULT_ROLES)),
+        'http://keycloak.url/auth/admin/realms/master/roles/00000000-0000-0000-0000-000000000000':
+            lambda: (_ for _ in ()).throw(HTTPError(url='roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='', fp=StringIO('')))
+    })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
         side_effect=build_mocked_request(count(), absent_role_url),
@@ -72,19 +75,24 @@ def mock_absent_role_url(mocker):
     )
 
 
-def test_state_absent_should_not_create_absent_role(monkeypatch, mock_absent_role_url):
+@pytest.mark.parametrize('role_identifier', [
+    {'name': 'does not exist'},
+    {'id': '00000000-0000-0000-0000-000000000000'}
+], ids=['with name', 'with id'])
+def test_state_absent_should_not_create_absent_role(
+        monkeypatch, mock_absent_role_url, role_identifier):
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
-    set_module_args(
-        {
-            'auth_keycloak_url': 'http://keycloak.url/auth',
-            'auth_username': 'test_admin',
-            'auth_password': 'admin_password',
-            'auth_realm': 'master',
-            'realm': 'master',
-            'name': 'does not exist',
-            'state': 'absent'
-        })
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'absent'
+    }
+    arguments.update(role_identifier)
+    set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
         keycloak_roles.run_module()
