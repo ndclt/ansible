@@ -104,7 +104,24 @@ def do_nothing_and_exit(kc, result):
 
 
 def deleting_role(kc, result, realm, given_role_id):
-    pass
+    module = kc.module
+    result['proposed'] = {}
+    result['changed'] = True
+    if module._diff:
+        result['diff']['before'] = result['existing']
+        result['diff']['after'] = ''
+    if module.check_mode:
+        module.exit_json(**result)
+    if 'name' in given_role_id:
+        asked_id = kc.get_role_id(given_role_id['name'], realm=realm)
+    else:
+        asked_id = given_role_id['id']
+    kc.delete_role(asked_id, realm=realm)
+    result['proposed'] = dict()
+    result['end_state'] = dict()
+    result['msg'] = 'Role %s has been deleted.' % list(given_role_id.values())[
+        0]
+    module.exit_json(**result)
 
 
 if __name__ == '__main__':

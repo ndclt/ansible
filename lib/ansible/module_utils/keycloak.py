@@ -42,6 +42,7 @@ URL_CLIENTS = "{url}/admin/realms/{realm}/clients"
 URL_CLIENT_ROLES = "{url}/admin/realms/{realm}/clients/{id}/roles"
 URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
 URL_REALM_ROLE = "{url}/admin/realms/{realm}/roles/{id}"
+URL_REALM_ROLE_BY_ID = "{url}/admin/realms/{realm}/roles-by-id/{id}"
 
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
@@ -401,3 +402,30 @@ class KeycloakAPI(object):
             self.module.fail_json(
                 msg='Could not obtain user %s for realm %s: %s'
                     % (id, realm, to_text(e)))
+
+    def delete_role(self, role_id, realm="master"):
+        """ Delete a role from Keycloak
+        :param role_id: id (not userId) of user to be deleted
+        :param realm: realm of role to be deleted
+        :return: HTTPResponse object on success
+        """
+        role_url = URL_REALM_ROLE_BY_ID.format(url=self.baseurl, realm=realm, id=role_id)
+
+        try:
+            return open_url(role_url, method='DELETE', headers=self.restheaders,
+                            validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(msg='Could not delete role %s in realm %s: %s'
+                                      % (role_id, realm, to_text(e)))
+
+    def get_role_id(self, name, realm='master'):
+        """ Obtain role id by name
+        :param name: name of role to be queried
+        :param realm: realm to be queried
+        :return: role id (usually a UUID)
+        """
+        result = self.get_role_by_name(name, realm)
+        if isinstance(result, dict) and 'id' in result:
+            return result['id']
+        else:
+            return None
