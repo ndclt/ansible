@@ -24,7 +24,8 @@ def run_module():
     meta_args = dict(
         state=dict(type='str', default='present', choices=['present', 'absent']),
         realm=dict(type='str', default='master'),
-        name=dict(type='str')
+        name=dict(type='str'),
+        id=dict(type='str')
     )
 
     argument_spec.update(meta_args)
@@ -36,7 +37,7 @@ def run_module():
     state = module.params.get('state')
     given_role_id = {'name': module.params.get('name')}
     if not given_role_id['name']:
-        given_role_id.update({'id': module.params.get('role_id')})
+        given_role_id.update({'id': module.params.get('id')})
         given_role_id.pop('name')
 
     kc = KeycloakAPI(module)
