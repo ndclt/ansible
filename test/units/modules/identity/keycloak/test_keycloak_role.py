@@ -81,6 +81,8 @@ def mock_absent_role_url(mocker):
 ], ids=['with name', 'with id'])
 def test_state_absent_should_not_create_absent_role(
         monkeypatch, mock_absent_role_url, role_identifier):
+    """This function mainly test the get_initial_role and do_nothing_and_exit functions
+    """
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
