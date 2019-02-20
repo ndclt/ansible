@@ -15,6 +15,7 @@ ANSIBLE_METADATA = {
 DOCUMENTATION = '''
 '''
 
+from ansible.module_utils._text import to_text
 from ansible.module_utils.keycloak import KeycloakAPI, camel, keycloak_argument_spec
 from ansible.module_utils.basic import AnsibleModule
 
@@ -48,7 +49,7 @@ def run_module():
 
     if before_role == dict():
         if state == 'absent':
-            do_nothing_and_exit(kc, result)
+            do_nothing_and_exit(kc, result, realm, given_role_id)
     else:
         if state == 'present':
             pass
@@ -97,11 +98,12 @@ def create_changeset(module):
     return changeset
 
 
-def do_nothing_and_exit(kc, result):
+def do_nothing_and_exit(kc, result, realm, given_role_id):
     module = kc.module
     if module._diff:
         result['diff'] = dict(before='', after='')
-    result['msg'] = 'Role does not exist, doing nothing.'
+    result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
+                     % (to_text(list(given_role_id.values())[0]), realm))
     module.exit_json(**result)
 
 
