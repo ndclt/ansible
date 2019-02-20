@@ -362,10 +362,10 @@ class KeycloakAPI(object):
                                       % (realm, str(e)))
 
     def get_role_by_name(self, name, realm='master'):
-        """ Obtain user representation by name
-        :param name: name of user to be queried
-        :param realm: user from this realm
-        :return: dict of user representation or None if none matching exist
+        """ Obtain role representation by name
+        :param name: name of role to be queried
+        :param realm: role from this realm
+        :return: dict of role representation or None if none matching exist
         """
         result = self.get_roles(realm)
         if isinstance(result, list):
