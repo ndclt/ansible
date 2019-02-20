@@ -32,6 +32,7 @@ __metaclass__ = type
 import json
 
 from ansible.module_utils.urls import open_url
+from ansible.module_utils._text import to_text
 from ansible.module_utils.six.moves.urllib.parse import urlencode
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
@@ -40,6 +41,7 @@ URL_CLIENT = "{url}/admin/realms/{realm}/clients/{id}"
 URL_CLIENTS = "{url}/admin/realms/{realm}/clients"
 URL_CLIENT_ROLES = "{url}/admin/realms/{realm}/clients/{id}/roles"
 URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
+URL_REALM_ROLE = "{url}/admin/realms/{realm}/roles/{id}"
 
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
@@ -375,4 +377,29 @@ class KeycloakAPI(object):
         return None
 
     def get_role_by_id(self, role_id, realm='master'):
-        return None
+        """ Obtain client template representation by id
+        :param role_id: id (not name) of role to be queried
+        :param realm: role from this realm
+        :return: dict of role representation or None if none matching exist
+        """
+        url = URL_REALM_ROLE.format(url=self.baseurl, id=role_id, realm=realm)
+
+        try:
+            return json.load(
+                open_url(url, method='GET', headers=self.restheaders,
+                         validate_certs=self.validate_certs))
+        except HTTPError as e:
+            if e.code == 404:
+                return None
+            else:
+                self.module.fail_json(
+                    msg='Could not obtain user %s for realm %s: %s'
+                        % (id, realm, to_text(e)))
+        except ValueError as e:
+            self.module.fail_json(
+                msg='API returned incorrect JSON when trying to obtain user %s for realm %s: %s'
+                    % (id, realm, to_text(e)))
+        except Exception as e:
+            self.module.fail_json(
+                msg='Could not obtain user %s for realm %s: %s'
+                    % (id, realm, to_text(e)))
