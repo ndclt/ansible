@@ -25,7 +25,9 @@ def run_module():
         state=dict(type='str', default='present', choices=['present', 'absent']),
         realm=dict(type='str', default='master'),
         name=dict(type='str'),
-        id=dict(type='str')
+        id=dict(type='str'),
+        client_name=dict(type='str'),
+        client_id=dict(type='str')
     )
 
     argument_spec.update(meta_args)

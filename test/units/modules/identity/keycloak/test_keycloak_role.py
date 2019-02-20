@@ -75,12 +75,20 @@ def mock_absent_role_url(mocker):
     )
 
 
-@pytest.mark.parametrize('role_identifier', [
-    {'name': 'does not exist'},
-    {'id': '00000000-0000-0000-0000-000000000000'}
-], ids=['with name', 'with id'])
+@pytest.mark.parametrize('role_identifier,error_message', [
+    ({'name': 'absent'}, 'Role absent does not exist in realm master'),
+    ({'id': '00000000-0000-0000-0000-000000000000'},
+     'Role 00000000-0000-0000-0000-000000000000 does not exist in realm master'),
+    ({'client_id': 'absent-client', 'name': 'absent'},
+     'Client absent-client does not exists, cannot found role absent in it'),
+    ({'client_id': 'client-with-role', 'name': 'absent'},
+     'Role absent does not exist in client-with-role client'),
+    ({'client_name': 'Client with role', 'id': '00000000-0000-0000-0000-000000000000'},
+     'Role 00000000-0000-0000-0000-000000000000 does not exist in client-with-role client'),
+], ids=['with name', 'with id', 'role in client, client does not exist',
+        'role name in client with id', 'role id in client with id'])
 def test_state_absent_should_not_create_absent_role(
-        monkeypatch, mock_absent_role_url, role_identifier):
+        monkeypatch, role_identifier, error_message, mock_absent_role_url):
     """This function mainly test the get_initial_role and do_nothing_and_exit functions
     """
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
@@ -99,7 +107,7 @@ def test_state_absent_should_not_create_absent_role(
     with pytest.raises(AnsibleExitJson) as exec_error:
         keycloak_roles.run_module()
     ansible_exit_json = exec_error.value.args[0]
-    assert ansible_exit_json['msg'] == 'Role does not exist, doing nothing.'
+    assert ansible_exit_json['msg'] == (error_message + ', doing nothing.')
 
 
 @pytest.fixture
