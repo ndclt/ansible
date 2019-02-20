@@ -356,10 +356,10 @@ class KeycloakAPI(object):
             return roles_json
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
-                                      % (realm, str(e)))
+                                      % (realm, to_text(e)))
         except Exception as e:
             self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
-                                      % (realm, str(e)))
+                                      % (realm, to_text(e)))
 
     def get_role_by_name(self, name, realm='master'):
         """ Obtain role representation by name
