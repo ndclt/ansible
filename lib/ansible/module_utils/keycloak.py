@@ -46,8 +46,6 @@ URL_REALM_ROLE = "{url}/admin/realms/{realm}/roles/{id}"
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
 
-URL_REALM_SCOPES = "{url}/admin/realms/{realm}/roles"
-
 
 def keycloak_argument_spec():
     """
