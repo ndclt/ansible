@@ -42,7 +42,7 @@ URL_CLIENTS = "{url}/admin/realms/{realm}/clients"
 URL_CLIENT_ROLES = "{url}/admin/realms/{realm}/clients/{id}/roles"
 URL_CLIENT_ROLE = "{url}/admin/realms/{realm}/clients/{id}/roles/{role_id}"
 URL_REALM_ROLES = "{url}/admin/realms/{realm}/roles"
-URL_REALM_ROLE = "{url}/admin/realms/{realm}/roles/{id}"
+URL_REALM_ROLE = "{url}/admin/realms/{realm}/roles/{role_id}"
 URL_REALM_ROLE_BY_ID = "{url}/admin/realms/{realm}/roles-by-id/{id}"
 
 URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
@@ -350,7 +350,7 @@ class KeycloakAPI(object):
         :param filter: if defined, only the user with userid specified in the filter is returned
         :return: list of dicts of users representations
         """
-        if not client_uuid:
+        if client_uuid:
             rolelist_url = URL_CLIENT_ROLES.format(url=self.baseurl, realm=realm, id=client_uuid)
         else:
             rolelist_url = URL_REALM_ROLES.format(url=self.baseurl, realm=realm)
@@ -385,11 +385,11 @@ class KeycloakAPI(object):
         :param realm: role from this realm
         :return: dict of role representation or None if none matching exist
         """
-        if not client_uuid:
+        if client_uuid:
             rolelist_url = URL_CLIENT_ROLE.format(
                 url=self.baseurl, realm=realm, id=client_uuid, role_id=role_id)
         else:
-            rolelist_url = URL_REALM_ROLE.format(url=self.baseurl, realm=realm)
+            rolelist_url = URL_REALM_ROLE.format(url=self.baseurl, realm=realm, role_id=role_id)
 
         try:
             return json.load(
