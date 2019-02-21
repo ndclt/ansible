@@ -33,6 +33,50 @@ DEFAULT_ROLES = [
      'description': '${role_offline-access}', 'composite': False,
      'clientRole': False, 'containerId': 'master'}]
 
+MASTER_CLIENTS = [
+    {
+        'id': '11111111-1111-1111-1111-111111111111',
+        'clientId': 'client-with-role',
+        'name': 'Client with role number 1',
+        'surrogateAuthRequired': False,
+        'enabled': True,
+        'clientAuthenticatorType': 'client-secret',
+        'redirectUris': [],
+        'webOrigins': [],
+        'notBefore': 0,
+        'bearerOnly': False,
+        'consentRequired': False,
+        'standardFlowEnabled': False,
+        'implicitFlowEnabled': False,
+        'directAccessGrantsEnabled': True,
+        'serviceAccountsEnabled': False,
+        'publicClient': True,
+        'frontchannelLogout': False,
+        'protocol': 'openid-connect',
+        'attributes': {},
+        'authenticationFlowBindingOverrides': {},
+        'fullScopeAllowed': False,
+        'nodeReRegistrationTimeout': 0,
+        'defaultClientScopes': [
+            'web-origins',
+            'role_list',
+            'profile',
+            'roles',
+            'email'
+        ],
+        'optionalClientScopes': [
+            'address',
+            'phone',
+            'offline_access'
+        ],
+        'access': {
+            'view': True,
+            'configure': True,
+            'manage': True
+        }
+    },
+]
+
 
 def build_mocked_request(get_id_user_count, response_dict):
     def _mocked_requests(*args, **kwargs):
@@ -66,7 +110,13 @@ def mock_absent_role_url(mocker):
     absent_role_url.update({
         'http://keycloak.url/auth/admin/realms/master/roles': create_wrapper(json.dumps(DEFAULT_ROLES)),
         'http://keycloak.url/auth/admin/realms/master/roles/00000000-0000-0000-0000-000000000000':
-            lambda: (_ for _ in ()).throw(HTTPError(url='roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='', fp=StringIO('')))
+            lambda: (_ for _ in ()).throw(HTTPError(url='roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='', fp=StringIO(''))),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=absent-client': create_wrapper(json.dumps({})),
+        # 11111111-1111-1111-1111-111111111111
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles': create_wrapper(json.dumps([])),
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/00000000-0000-0000-0000-000000000000':
+            lambda: (_ for _ in ()).throw(HTTPError(url='client/roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='',fp=StringIO(''))),
+
     })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
@@ -88,15 +138,15 @@ def mock_absent_role_url(mocker):
 ], ids=['with name', 'with id', 'role in client, client does not exist',
         'role name in client with id', 'role id in client with id'])
 def test_state_absent_should_not_create_absent_role(
-        monkeypatch, role_identifier, error_message):
+        monkeypatch, role_identifier, error_message, mock_absent_role_url):
     """This function mainly test the get_initial_role and do_nothing_and_exit functions
     """
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        'auth_keycloak_url': 'http://localhost:8080/auth',
-        'auth_username': 'nd',
-        'auth_password': 'nd',
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent'
