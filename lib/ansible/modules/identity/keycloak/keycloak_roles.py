@@ -109,8 +109,12 @@ def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid
     if client_id:
         if not client_uuid:
             result['msg'] = (
-                    'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
-                    % (to_text(client_id), realm, to_text(list(given_role_id.values())[0])))
+                'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
+                % (to_text(client_id), realm, to_text(list(given_role_id.values())[0])))
+        else:
+            result['msg'] = (
+                'Role %s does not exist in client %s of realm %s, doing nothing.'
+                % (to_text(list(given_role_id.values())[0]), client_id, realm))
     else:
         result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
                          % (to_text(list(given_role_id.values())[0]), realm))
