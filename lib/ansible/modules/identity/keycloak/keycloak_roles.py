@@ -37,10 +37,9 @@ def run_module():
                            )
     realm = module.params.get('realm')
     state = module.params.get('state')
-    given_role_id = {'name': module.params.get('name')}
-    if not given_role_id['name']:
-        given_role_id.update({'id': module.params.get('id')})
-        given_role_id.pop('name')
+    given_role_id = module.params.get('name')
+    if not given_role_id:
+        given_role_id= module.params.get('id')
     client_id = module.params.get('client_id')
 
     kc = KeycloakAPI(module)
@@ -54,18 +53,15 @@ def run_module():
         if state == 'present':
             pass
         else:
-            deleting_role(kc, result, realm, given_role_id)
+            deleting_role(kc, result, realm, given_role_id, client_uuid)
 
 
-def get_initial_role(given_user_id, kc, realm, client_id):
+def get_initial_role(given_role_id, kc, realm, client_id):
     if client_id:
         client_uuid = kc.get_client_id(client_id, realm)
     else:
         client_uuid = None
-    if 'name' in given_user_id:
-        before_role = kc.get_role_by_name(given_user_id['name'], realm=realm, client_uuid=client_uuid)
-    else:
-        before_role = kc.get_role_by_id(given_user_id['id'], realm=realm, client_uuid=client_uuid)
+    before_role = kc.get_role(given_role_id, realm=realm, client_uuid=client_uuid)
     if before_role is None:
         before_role = dict()
     return before_role, client_uuid
@@ -110,18 +106,18 @@ def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid
         if not client_uuid:
             result['msg'] = (
                 'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
-                % (to_text(client_id), realm, to_text(list(given_role_id.values())[0])))
+                % (to_text(client_id), realm, to_text(given_role_id)))
         else:
             result['msg'] = (
                 'Role %s does not exist in client %s of realm %s, doing nothing.'
-                % (to_text(list(given_role_id.values())[0]), client_id, realm))
+                % (to_text(given_role_id), to_text(client_id), to_text(realm)))
     else:
         result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
-                         % (to_text(list(given_role_id.values())[0]), realm))
+                         % (to_text(given_role_id), to_text(realm)))
     module.exit_json(**result)
 
 
-def deleting_role(kc, result, realm, given_role_id):
+def deleting_role(kc, result, realm, given_role_id, client_uuid):
     module = kc.module
     result['proposed'] = {}
     result['changed'] = True
@@ -130,14 +126,11 @@ def deleting_role(kc, result, realm, given_role_id):
         result['diff']['after'] = ''
     if module.check_mode:
         module.exit_json(**result)
-    if 'name' in given_role_id:
-        asked_id = kc.get_role_id(given_role_id['name'], realm=realm)
-    else:
-        asked_id = given_role_id['id']
+    asked_id = kc.get_role_id(given_role_id, realm, client_uuid)
     kc.delete_role(asked_id, realm=realm)
     result['proposed'] = dict()
     result['end_state'] = dict()
-    result['msg'] = 'Role %s has been deleted.' % list(given_role_id.values())[0]
+    result['msg'] = 'Role %s has been deleted.' % given_role_id
     module.exit_json(**result)
 
 

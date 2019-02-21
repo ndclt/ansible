@@ -33,7 +33,7 @@ import json
 
 from ansible.module_utils.urls import open_url
 from ansible.module_utils._text import to_text
-from ansible.module_utils.six.moves.urllib.parse import urlencode
+from ansible.module_utils.six.moves.urllib.parse import urlencode, quote
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 URL_TOKEN = "{url}/realms/{realm}/protocol/openid-connect/token"
@@ -344,42 +344,7 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not delete client template %s in realm %s: %s'
                                       % (id, realm, str(e)))
 
-    def get_roles(self, realm='master', client_uuid=None):
-        """ Obtains client representations for clients in a realm
-        :param realm: realm to be queried
-        :param filter: if defined, only the user with userid specified in the filter is returned
-        :return: list of dicts of users representations
-        """
-        if client_uuid:
-            rolelist_url = URL_CLIENT_ROLES.format(url=self.baseurl, realm=realm, id=client_uuid)
-        else:
-            rolelist_url = URL_REALM_ROLES.format(url=self.baseurl, realm=realm)
-
-        try:
-            roles_json = json.load(open_url(rolelist_url, method='GET', headers=self.restheaders,
-                                           validate_certs=self.validate_certs))
-            return roles_json
-        except ValueError as e:
-            self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
-                                      % (realm, to_text(e)))
-        except Exception as e:
-            self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
-                                      % (realm, to_text(e)))
-
-    def get_role_by_name(self, name, realm='master', client_uuid=None):
-        """ Obtain role representation by name
-        :param name: name of role to be queried
-        :param realm: role from this realm
-        :return: dict of role representation or None if none matching exist
-        """
-        result = self.get_roles(realm, client_uuid)
-        if isinstance(result, list):
-            result = [x for x in result if x['name'] == name]
-            if len(result) > 0:
-                return result[0]
-        return None
-
-    def get_role_by_id(self, role_id, realm='master', client_uuid=None):
+    def get_role(self, role_id, realm='master', client_uuid=None):
         """ Obtain client template representation by id
         :param role_id: id (not name) of role to be queried
         :param realm: role from this realm
@@ -387,9 +352,11 @@ class KeycloakAPI(object):
         """
         if client_uuid:
             rolelist_url = URL_CLIENT_ROLE.format(
-                url=self.baseurl, realm=realm, id=client_uuid, role_id=role_id)
+                url=self.baseurl, realm=quote(realm), id=client_uuid,
+                role_id=quote(role_id))
         else:
-            rolelist_url = URL_REALM_ROLE.format(url=self.baseurl, realm=realm, role_id=role_id)
+            rolelist_url = URL_REALM_ROLE.format(
+                url=self.baseurl, realm=quote(realm), role_id=quote(role_id))
 
         try:
             return json.load(
@@ -417,7 +384,7 @@ class KeycloakAPI(object):
         :param realm: realm of role to be deleted
         :return: HTTPResponse object on success
         """
-        role_url = URL_REALM_ROLE_BY_ID.format(url=self.baseurl, realm=realm, id=role_id)
+        role_url = URL_REALM_ROLE_BY_ID.format(url=self.baseurl, realm=quote(realm), id=quote(role_id))
 
         try:
             return open_url(role_url, method='DELETE', headers=self.restheaders,
@@ -426,13 +393,13 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not delete role %s in realm %s: %s'
                                       % (role_id, realm, to_text(e)))
 
-    def get_role_id(self, name, realm='master'):
+    def get_role_id(self, name, realm='master', client_uuid=None):
         """ Obtain role id by name
         :param name: name of role to be queried
         :param realm: realm to be queried
         :return: role id (usually a UUID)
         """
-        result = self.get_role_by_name(name, realm)
+        result = self.get_role(name, realm, client_uuid)
         if isinstance(result, dict) and 'id' in result:
             return result['id']
         else:
