@@ -191,8 +191,7 @@ def mock_delete_role_url(mocker):
         autospec=True
     )
 
-# url for the delete of role in client
-# http://localhost:8080/auth/admin/realms/master/roles-by-id/25a25b34-47a3-4eba-9faf-6d4d4b460d7d?client=9b3fe963-09b7-41dd-906b-5fec3add8a16
+
 @pytest.mark.parametrize('client_id', [
     {},
     {'client_id': 'client-with-role'}
