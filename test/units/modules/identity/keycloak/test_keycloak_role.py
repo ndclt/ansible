@@ -80,7 +80,7 @@ def mock_absent_role_url(mocker):
     ({'id': '00000000-0000-0000-0000-000000000000'},
      'Role 00000000-0000-0000-0000-000000000000 does not exist in realm master'),
     ({'client_id': 'absent-client', 'name': 'absent'},
-     'Client absent-client does not exists, cannot found role absent in it'),
+     'Client absent-client does not exist in master, cannot found role absent in it'),
     ({'client_id': 'client-with-role', 'name': 'absent'},
      'Role absent does not exist in client-with-role client'),
     ({'client_id': 'client-with-role', 'id': '00000000-0000-0000-0000-000000000000'},
