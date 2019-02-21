@@ -104,18 +104,25 @@ def get_response(object_with_future_response, method, get_id_call_count):
     return object_with_future_response
 
 
+def raise_404(url):
+    def _raise_404():
+        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
+    return _raise_404
+
+
 @pytest.fixture
 def mock_absent_role_url(mocker):
     absent_role_url = CONNECTION_DICT.copy()
     absent_role_url.update({
-        'http://keycloak.url/auth/admin/realms/master/roles': create_wrapper(json.dumps(DEFAULT_ROLES)),
+        'http://keycloak.url/auth/admin/realms/master/roles/absent': raise_404('master/roles/absent'),
         'http://keycloak.url/auth/admin/realms/master/roles/00000000-0000-0000-0000-000000000000':
-            lambda: (_ for _ in ()).throw(HTTPError(url='roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='', fp=StringIO(''))),
+            raise_404('roles/00000000-0000-0000-0000-000000000000'),
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=absent-client': create_wrapper(json.dumps({})),
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
-        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles': create_wrapper(json.dumps([])),
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/absent':
+            raise_404('clients/11111111-1111-1111-1111-111111111111/roles/absent'),
         'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/00000000-0000-0000-0000-000000000000':
-            lambda: (_ for _ in ()).throw(HTTPError(url='client/roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='',fp=StringIO(''))),
+            raise_404('clients/11111111-1111-1111-1111-111111111111/roles/absent/00000000-0000-0000-0000-000000000000')
 
     })
     return mocker.patch(
@@ -178,20 +185,26 @@ def mock_delete_role_url(mocker):
         autospec=True
     )
 
-
+# url for the delete of role in client
+# http://localhost:8080/auth/admin/realms/master/roles-by-id/25a25b34-47a3-4eba-9faf-6d4d4b460d7d?client=9b3fe963-09b7-41dd-906b-5fec3add8a16
+@pytest.mark.parametrize('client_id', [
+    {},
+    {'client_id': 'client-with-role'}
+], ids=['role in realm', 'role in client'])
 def test_state_absent_with_existing_role_should_delete_the_role(
-        monkeypatch, mock_delete_role_url):
+        monkeypatch, client_id):
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        'auth_keycloak_url': 'http://keycloak.url/auth',
-        'auth_username': 'test_admin',
-        'auth_password': 'admin_password',
+        'auth_keycloak_url': 'http://localhost:8080/auth',
+        'auth_username': 'nd',
+        'auth_password': 'nd',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
         'name': 'to delete'
     }
+    arguments.update(client_id)
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
