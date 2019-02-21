@@ -169,19 +169,25 @@ def test_state_absent_should_not_create_absent_role(
 
 @pytest.fixture
 def mock_delete_role_url(mocker):
-    absent_role_url = CONNECTION_DICT.copy()
-    existing_role = DEFAULT_ROLES.copy()
-    existing_role.append({
+    delete_role_urls = CONNECTION_DICT.copy()
+    to_delete_role_in_master = {
         'id': 'cccccccc-d943-4274-9953-8b6a930ee74e', 'name': 'to delete',
         'description': 'to be deleted during test', 'composite': False,
-        'clientRole': False, 'containerId': 'master'},)
-    absent_role_url.update({
-        'http://keycloak.url/auth/admin/realms/master/roles': create_wrapper(json.dumps(existing_role)),
-        'http://keycloak.url/auth/admin/realms/master/roles-by-id/cccccccc-d943-4274-9953-8b6a930ee74e': None
+        'clientRole': False, 'containerId': 'master'}
+    to_delete_role_in_client = {
+        "id": "bbbbbbbb-acca-463b-bd93-2e7fd66022f6", "name": "to delete",
+        "composite": False, "clientRole": True,
+        "containerId": "11111111-1111-1111-1111-111111111111", "attributes": {}}
+    delete_role_urls.update({
+        'http://keycloak.url/auth/admin/realms/master/roles/to%20delete': create_wrapper(json.dumps(to_delete_role_in_master)),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/to%20delete': create_wrapper(json.dumps(to_delete_role_in_client)),
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/cccccccc-d943-4274-9953-8b6a930ee74e': None,
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/bbbbbbbb-acca-463b-bd93-2e7fd66022f6': None
     })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
-        side_effect=build_mocked_request(count(), absent_role_url),
+        side_effect=build_mocked_request(count(), delete_role_urls),
         autospec=True
     )
 
@@ -192,13 +198,13 @@ def mock_delete_role_url(mocker):
     {'client_id': 'client-with-role'}
 ], ids=['role in realm', 'role in client'])
 def test_state_absent_with_existing_role_should_delete_the_role(
-        monkeypatch, client_id):
+        monkeypatch, client_id, mock_delete_role_url):
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        'auth_keycloak_url': 'http://localhost:8080/auth',
-        'auth_username': 'nd',
-        'auth_password': 'nd',
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
