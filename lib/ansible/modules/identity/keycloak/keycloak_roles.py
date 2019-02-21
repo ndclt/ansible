@@ -44,12 +44,12 @@ def run_module():
     client_id = module.params.get('client_id')
 
     kc = KeycloakAPI(module)
-    before_role = get_initial_role(given_role_id, kc, realm, client_id)
+    before_role, client_uuid = get_initial_role(given_role_id, kc, realm, client_id)
     result = create_result(before_role, module)
 
     if before_role == dict():
         if state == 'absent':
-            do_nothing_and_exit(kc, result, realm, given_role_id)
+            do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid)
     else:
         if state == 'present':
             pass
@@ -68,7 +68,7 @@ def get_initial_role(given_user_id, kc, realm, client_id):
         before_role = kc.get_role_by_id(given_user_id['id'], realm=realm, client_uuid=client_uuid)
     if before_role is None:
         before_role = dict()
-    return before_role
+    return before_role, client_uuid
 
 
 def create_result(before_user, module):
@@ -102,12 +102,18 @@ def create_changeset(module):
     return changeset
 
 
-def do_nothing_and_exit(kc, result, realm, given_role_id):
+def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid):
     module = kc.module
     if module._diff:
         result['diff'] = dict(before='', after='')
-    result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
-                     % (to_text(list(given_role_id.values())[0]), realm))
+    if client_id:
+        if not client_uuid:
+            result['msg'] = (
+                    'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
+                    % (to_text(client_id), realm, to_text(list(given_role_id.values())[0])))
+    else:
+        result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
+                         % (to_text(list(given_role_id.values())[0]), realm))
     module.exit_json(**result)
 
 
@@ -127,8 +133,7 @@ def deleting_role(kc, result, realm, given_role_id):
     kc.delete_role(asked_id, realm=realm)
     result['proposed'] = dict()
     result['end_state'] = dict()
-    result['msg'] = 'Role %s has been deleted.' % list(given_role_id.values())[
-        0]
+    result['msg'] = 'Role %s has been deleted.' % list(given_role_id.values())[0]
     module.exit_json(**result)
 
 
