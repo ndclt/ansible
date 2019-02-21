@@ -112,7 +112,7 @@ def mock_absent_role_url(mocker):
         'http://keycloak.url/auth/admin/realms/master/roles/00000000-0000-0000-0000-000000000000':
             lambda: (_ for _ in ()).throw(HTTPError(url='roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='', fp=StringIO(''))),
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=absent-client': create_wrapper(json.dumps({})),
-        # 11111111-1111-1111-1111-111111111111
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
         'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles': create_wrapper(json.dumps([])),
         'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/00000000-0000-0000-0000-000000000000':
             lambda: (_ for _ in ()).throw(HTTPError(url='client/roles/00000000-0000-0000-0000-000000000000', code=404, msg='does not exists', hdrs='',fp=StringIO(''))),
