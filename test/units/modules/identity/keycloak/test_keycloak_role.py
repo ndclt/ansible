@@ -82,9 +82,9 @@ def mock_absent_role_url(mocker):
     ({'client_id': 'absent-client', 'name': 'absent'},
      'Client absent-client does not exist in master, cannot found role absent in it'),
     ({'client_id': 'client-with-role', 'name': 'absent'},
-     'Role absent does not exist in client-with-role client'),
+     'Role absent does not exist in client client-with-role of realm master'),
     ({'client_id': 'client-with-role', 'id': '00000000-0000-0000-0000-000000000000'},
-     'Role 00000000-0000-0000-0000-000000000000 does not exist in client-with-role client'),
+     'Role 00000000-0000-0000-0000-000000000000 does not exist in client client-with-role of realm master'),
 ], ids=['with name', 'with id', 'role in client, client does not exist',
         'role name in client with id', 'role id in client with id'])
 def test_state_absent_should_not_create_absent_role(
