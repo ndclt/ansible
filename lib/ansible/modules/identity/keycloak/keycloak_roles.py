@@ -63,12 +63,12 @@ def get_initial_role(given_user_id, kc, realm, client_id):
     else:
         client_uuid = None
     if 'name' in given_user_id:
-        before_user = kc.get_role_by_name(given_user_id['name'], realm=realm, client_uuid=client_uuid)
+        before_role = kc.get_role_by_name(given_user_id['name'], realm=realm, client_uuid=client_uuid)
     else:
-        before_user = kc.get_role_by_id(given_user_id['id'], realm=realm, client_uuid=client_uuid)
-    if before_user is None:
-        before_user = dict()
-    return before_user
+        before_role = kc.get_role_by_id(given_user_id['id'], realm=realm, client_uuid=client_uuid)
+    if before_role is None:
+        before_role = dict()
+    return before_role
 
 
 def create_result(before_user, module):
