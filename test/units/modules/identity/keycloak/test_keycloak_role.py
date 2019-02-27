@@ -262,7 +262,8 @@ def mock_create_role_urls(mocker):
             'GET': [
                 raise_404('http://keycloak.url/auth/admin/realms/master/roles/role1'),
                 create_wrapper(json.dumps(update_created_role(into_client=False)))
-            ]
+            ],
+            'PUT': None
         },
     })
 
@@ -273,11 +274,13 @@ def mock_create_role_urls(mocker):
     )
 
 
-@pytest.mark.parametrize('client_id', [
+@pytest.mark.parametrize('role_modifications', [
     {},
-    {'client_id': 'client-with-role'}
-], ids=['role in realm', 'role in client'])
-def test_state_present_with_absent_role_should_create_it(monkeypatch, client_id, mock_create_role_urls):
+    {'client_id': 'client-with-role'},
+    {'attributes': {'a': 1}}
+], ids=['role in realm', 'role in client', 'create_attributes'])
+def test_state_present_with_absent_role_should_create_it(
+        monkeypatch, role_modifications, mock_create_role_urls):
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
@@ -290,7 +293,7 @@ def test_state_present_with_absent_role_should_create_it(monkeypatch, client_id,
         'name': 'role1',
         'description': 'a really long description usefull\nfor admin',
     }
-    arguments.update(client_id)
+    arguments.update(role_modifications)
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
