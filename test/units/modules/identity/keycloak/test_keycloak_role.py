@@ -216,3 +216,82 @@ def test_state_absent_with_existing_role_should_delete_the_role(
         keycloak_roles.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'Role to delete has been deleted.'
+
+
+class CreatedUserMockResponse(object):
+    def __init__(self, role_name, client_uuid=None):
+        if client_uuid:
+            destination_url = 'http://keycloak.url/auth/admin/realms/master/clients/{uuid}/roles/{name}'.format(uuid=client_uuid, name=role_name)
+        else:
+            destination_url = 'http://keycloak.url/auth/admin/realms/master/roles/{name}'.format(name=role_name)
+        self.headers = {'Location': destination_url}
+
+
+COMMON_CREATED_ROLE = {'name': 'role1', 'description': 'a really long description usefull\nfor admin', 'composite': False, 'attributes': {}}
+
+
+def update_created_role(into_client):
+    created_role = COMMON_CREATED_ROLE.copy()
+    if into_client:
+        created_role.update({'clientRole': True, 'containerId': '11111111-1111-1111-1111-111111111111', 'id': 'cccccccc-1111-1111-1111-111111111111'})
+    else:
+        created_role.update({'clientRole': False, 'containerId': 'master', 'id': 'ffffffff-1111-1111-1111-111111111111'})
+    return created_role
+
+
+@pytest.fixture
+def mock_create_role_urls(mocker):
+    create_role_urls = CONNECTION_DICT.copy()
+    create_role_urls.update({
+        'http://keycloak.url/auth/admin/realms/master/roles': {
+            'POST': CreatedUserMockResponse('role1')
+        },
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/role1': {
+            'GET': [
+                raise_404('http://localhost:8080/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/role1'),
+                create_wrapper(json.dumps(update_created_role(into_client=True)))
+            ]
+        },
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles':{
+            'POST': CreatedUserMockResponse('role1', '11111111-1111-1111-1111-111111111111')
+        },
+        'http://keycloak.url/auth/admin/realms/master/roles/role1': {
+            'GET': [
+                raise_404('http://keycloak.url/auth/admin/realms/master/roles/role1'),
+                create_wrapper(json.dumps(update_created_role(into_client=False)))
+            ]
+        },
+    })
+
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), create_role_urls),
+        autospec=True
+    )
+
+
+@pytest.mark.parametrize('client_id', [
+    {},
+    {'client_id': 'client-with-role'}
+], ids=['role in realm', 'role in client'])
+def test_state_present_with_absent_role_should_create_it(monkeypatch, client_id, mock_create_role_urls):
+    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'present',
+        'name': 'role1',
+        'description': 'a really long description usefull\nfor admin',
+    }
+    arguments.update(client_id)
+    set_module_args(arguments)
+
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_roles.run_module()
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == 'Role role1 has been created.'
