@@ -367,16 +367,16 @@ class KeycloakAPI(object):
                 return None
             else:
                 self.module.fail_json(
-                    msg='Could not obtain user %s for realm %s: %s'
-                        % (id, realm, to_text(e)))
+                    msg='Could not obtain role %s for realm %s: %s'
+                        % (role_id, realm, to_text(e)))
         except ValueError as e:
             self.module.fail_json(
-                msg='API returned incorrect JSON when trying to obtain user %s for realm %s: %s'
-                    % (id, realm, to_text(e)))
+                msg='API returned incorrect JSON when trying to obtain role %s for realm %s: %s'
+                    % (role_id, realm, to_text(e)))
         except Exception as e:
             self.module.fail_json(
-                msg='Could not obtain user %s for realm %s: %s'
-                    % (id, realm, to_text(e)))
+                msg='Could not obtain role %s for realm %s: %s'
+                    % (role_id, realm, to_text(e)))
 
     def delete_role(self, role_id, realm="master"):
         """ Delete a role from Keycloak
@@ -418,3 +418,37 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
                                       % (realm, to_text(e)))
+
+    def get_json_from_url(self, url):
+        try:
+            user_json = json.load(
+                open_url(url, method='GET', headers=self.restheaders,
+                         validate_certs=self.validate_certs))
+            return user_json
+        except ValueError as e:
+            self.module.fail_json(
+                msg='API returned incorrect JSON when trying to get: %s' % (
+                    url))
+        except Exception as e:
+            self.module.fail_json(msg='Could not obtain url: %s' % (url))
+
+    def create_role(self, role_representation, realm="master", client_uuid=None):
+        """ Create a user in keycloak
+        :param role_representation: user representation of user to be created. Must at least contain field userId
+        :param realm: realm for user to be created
+        :return: HTTPResponse object on success
+        """
+        if client_uuid:
+            role_url = URL_CLIENT_ROLES.format(
+                url=self.baseurl, realm=quote(realm), id=client_uuid)
+            role_representation.pop('clientId')
+        else:
+            role_url = URL_REALM_ROLES.format(url=self.baseurl, realm=quote(realm))
+
+        try:
+            return open_url(role_url, method='POST', headers=self.restheaders,
+                            data=json.dumps(role_representation), validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(msg='Could not create user %s in realm %s: %s'
+                                      % (role_representation['name'], realm, str(e)),
+                                  payload=role_representation)
