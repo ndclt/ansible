@@ -452,3 +452,30 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not create user %s in realm %s: %s'
                                       % (role_representation['name'], realm, str(e)),
                                   payload=role_representation)
+
+    def update_role(self, role_id, role_representation, realm="master", client_uuid=None):
+        """ Update an existing role
+        :param uuid: id of role to be updated in Keycloak
+        :param role_representation: corresponding (partial/full) user representation with updates
+        :param realm: realm the user is in
+        :return: HTTPResponse object on success
+        """
+        if client_uuid:
+            rolelist_url = URL_CLIENT_ROLE.format(
+                url=self.baseurl, realm=quote(realm), id=client_uuid,
+                role_id=quote(role_id))
+        else:
+            rolelist_url = URL_REALM_ROLE.format(
+                url=self.baseurl, realm=quote(realm), role_id=quote(role_id))
+
+        try:
+            return open_url(rolelist_url, method='PUT', headers=self.restheaders,
+                            data=json.dumps(role_representation),
+                            validate_certs=self.validate_certs)
+        except Exception as e:
+            self.module.fail_json(
+                msg='Could not update user %s in realm %s: %s' % (
+                role_id, realm, str(e)),
+                user_representation=role_representation,
+                user_url=rolelist_url
+            )

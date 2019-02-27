@@ -19,6 +19,8 @@ from ansible.module_utils._text import to_text
 from ansible.module_utils.keycloak import KeycloakAPI, camel, keycloak_argument_spec
 from ansible.module_utils.basic import AnsibleModule
 
+AUTHORIZED_ATTRIBUTE_VALUE_TYPE = (str, int, float, bool)
+
 
 def run_module():
     argument_spec = keycloak_argument_spec()
@@ -29,6 +31,7 @@ def run_module():
         id=dict(type='str'),
         client_id=dict(type='str'),
         description=dict(type='str'),
+        attributes=dict(type='dict'),
     )
 
     argument_spec.update(meta_args)
@@ -43,6 +46,11 @@ def run_module():
         given_role_id= module.params.get('id')
     client_id = module.params.get('client_id')
 
+    if not attributes_format_is_correct(module.params.get('attributes')):
+        module.fail_json(msg=(
+            'Attributes are not in the correct format. Should be a dictionary with '
+            'one value per key as string, integer and boolean'))
+
     kc = KeycloakAPI(module)
     before_role, client_uuid = get_initial_role(given_role_id, kc, realm, client_id)
     result = create_result(before_role, module)
@@ -53,9 +61,35 @@ def run_module():
         create_role(kc, result, realm, given_role_id, client_id)
     else:
         if state == 'present':
-            pass
+            updating_user(kc, result, realm, given_role_id, client_uuid)
         else:
             deleting_role(kc, result, realm, given_role_id, client_uuid)
+
+
+def attributes_format_is_correct(given_attributes):
+    if not given_attributes:
+        return True
+    for one_value in given_attributes.values():
+        if isinstance(one_value, list):
+            if not attribute_as_list_format_is_correct(one_value):
+                return False
+            continue
+        if isinstance(one_value, dict):
+            return False
+        if not isinstance(one_value, AUTHORIZED_ATTRIBUTE_VALUE_TYPE):
+            return False
+    return True
+
+
+def attribute_as_list_format_is_correct(one_value, first_call=True):
+    if isinstance(one_value, list) and first_call:
+        if len(one_value) > 1:
+            return False
+        return attribute_as_list_format_is_correct(one_value[0], False)
+    else:
+        if not isinstance(one_value, AUTHORIZED_ATTRIBUTE_VALUE_TYPE):
+            return False
+    return True
 
 
 def get_initial_role(given_role_id, kc, realm, client_id):
@@ -135,9 +169,43 @@ def create_role(kc, result, realm, given_role_id, client_id):
         module.exit_json(**result)
 
     response = kc.create_role(role_to_create, realm=realm, client_uuid=client_uuid)
+    if 'attributes' in result['proposed']:
+        kc.update_role(given_role_id, role_to_create, realm=realm, client_uuid=client_uuid)
     after_user = kc.get_json_from_url(response.headers.get('Location'))
     result['end_state'] = after_user
     result['msg'] = 'Role %s has been created.' % given_role_id
+    module.exit_json(**result)
+
+
+def updating_user(kc, result, realm, given_role_id, client_uuid):
+    module = kc.module
+    changeset = result['proposed']
+    before_role = result['existing']
+    updated_role = before_role.copy()
+    updated_role.update(changeset)
+    result['changed'] = True
+
+    if module.check_mode:
+        # We can only compare the current user with the proposed updates we have
+        if module._diff:
+            result['diff'] = dict(
+                before=before_role,
+                after=updated_role)
+        result['changed'] = (before_role != updated_role)
+        module.exit_json(**result)
+
+    kc.update_role(given_role_id, changeset, realm=realm, client_uuid=client_uuid)
+    after_role = kc.get_role(given_role_id, realm=realm, client_uuid=client_uuid)
+    if before_role == after_role:
+        result['changed'] = False
+
+    if module._diff:
+        result['diff'] = dict(
+            before=before_role,
+            after=after_role)
+
+    result['end_state'] = after_role
+    result['msg'] = 'Role %s has been updated.' % given_role_id
     module.exit_json(**result)
 
 
