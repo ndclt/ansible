@@ -168,7 +168,7 @@ def test_state_absent_should_not_create_absent_role(
 
 
 @pytest.fixture
-def mock_delete_role_url(mocker):
+def mock_delete_role_urls(mocker):
     delete_role_urls = CONNECTION_DICT.copy()
     to_delete_role_in_master = {
         'id': 'cccccccc-d943-4274-9953-8b6a930ee74e', 'name': 'to delete',
@@ -197,7 +197,7 @@ def mock_delete_role_url(mocker):
     {'client_id': 'client-with-role'}
 ], ids=['role in realm', 'role in client'])
 def test_state_absent_with_existing_role_should_delete_the_role(
-        monkeypatch, client_id, mock_delete_role_url):
+        monkeypatch, client_id, mock_delete_role_urls):
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
