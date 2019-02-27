@@ -27,7 +27,8 @@ def run_module():
         realm=dict(type='str', default='master'),
         name=dict(type='str'),
         id=dict(type='str'),
-        client_id=dict(type='str')
+        client_id=dict(type='str'),
+        description=dict(type='str'),
     )
 
     argument_spec.update(meta_args)
@@ -49,6 +50,7 @@ def run_module():
     if before_role == dict():
         if state == 'absent':
             do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid)
+        create_role(kc, result, realm, given_role_id, client_id)
     else:
         if state == 'present':
             pass
@@ -114,6 +116,28 @@ def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid
     else:
         result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
                          % (to_text(given_role_id), to_text(realm)))
+    module.exit_json(**result)
+
+
+def create_role(kc, result, realm, given_role_id, client_id):
+    if client_id:
+        client_uuid = kc.get_client_id(client_id, realm)
+    else:
+        client_uuid = None
+    module = kc.module
+    role_to_create = result['proposed']
+    result['changed'] = True
+
+    if module._diff:
+        result['diff'] = dict(before='',
+                              after=role_to_create)
+    if module.check_mode:
+        module.exit_json(**result)
+
+    response = kc.create_role(role_to_create, realm=realm, client_uuid=client_uuid)
+    after_user = kc.get_json_from_url(response.headers.get('Location'))
+    result['end_state'] = after_user
+    result['msg'] = 'Role %s has been created.' % given_role_id
     module.exit_json(**result)
 
 
