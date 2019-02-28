@@ -29,7 +29,7 @@ def run_module():
         realm=dict(type='str', default='master'),
         name=dict(type='str'),
         id=dict(type='str'),
-        client_id=dict(type='str'),
+        client_id=dict(type='str', aliases=['clientId']),
         description=dict(type='str'),
         attributes=dict(type='dict'),
     )
