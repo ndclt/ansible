@@ -66,6 +66,7 @@ options:
         description:
             - the id (generally an uuid) of the role to modify.
             - I(name) and I(id) are mutually exclusive.
+            - I(id) and I(client_id) are mutually exclusive.
         type: str
     
     client_id:
@@ -73,6 +74,7 @@ options:
             - client id of client where the role will be inserted. This is usually 
             an alphanumeric name chosen by you.
             - the client must exist before this call.
+            - I(id) and I(client_id) are mutually exclusive.
         type: str
         aliases: [ clientId ]
         required: false
@@ -193,7 +195,9 @@ def run_module():
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
                            required_one_of=([['name', 'id']]),
-                           mutually_exclusive=([['name', 'id']]),
+                           mutually_exclusive=([
+                               ['name', 'id'],
+                               ['id', 'client_id']]),
                            )
     realm = module.params.get('realm')
     state = module.params.get('state')
