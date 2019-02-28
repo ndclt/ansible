@@ -339,12 +339,9 @@ def test_state_present_with_present_role_should_update_it(monkeypatch, client_id
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        #'auth_keycloak_url': 'http://localhost:8080/auth',
-        #'auth_username': 'nd',
-        #'auth_password': 'nd',
-         'auth_keycloak_url': 'http://keycloak.url/auth',
-         'auth_username': 'test_admin',
-         'auth_password': 'admin_password',
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'present',
