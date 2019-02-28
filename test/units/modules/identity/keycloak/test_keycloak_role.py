@@ -7,7 +7,7 @@ from itertools import count
 import pytest
 
 from ansible.module_utils.six import StringIO
-from ansible.modules.identity.keycloak import keycloak_roles
+from ansible.modules.identity.keycloak import keycloak_role
 from units.modules.utils import (
     AnsibleExitJson, fail_json, exit_json, set_module_args)
 from ansible.module_utils.six.moves.urllib.error import HTTPError
@@ -149,8 +149,8 @@ def test_state_absent_should_not_create_absent_role(
         monkeypatch, role_identifier, error_message, mock_absent_role_url):
     """This function mainly test the get_initial_role and do_nothing_and_exit functions
     """
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -163,7 +163,7 @@ def test_state_absent_should_not_create_absent_role(
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_roles.run_module()
+        keycloak_role.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == (error_message + ', doing nothing.')
 
@@ -199,8 +199,8 @@ def mock_delete_role_urls(mocker):
 ], ids=['role in realm', 'role in client'])
 def test_state_absent_with_existing_role_should_delete_the_role(
         monkeypatch, client_id, mock_delete_role_urls):
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -214,7 +214,7 @@ def test_state_absent_with_existing_role_should_delete_the_role(
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_roles.run_module()
+        keycloak_role.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'Role to delete has been deleted.'
 
@@ -282,8 +282,8 @@ def mock_create_role_urls(mocker):
 ], ids=['role in realm', 'role in client', 'create_attributes'])
 def test_state_present_with_absent_role_should_create_it(
         monkeypatch, role_modifications, mock_create_role_urls):
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -298,7 +298,7 @@ def test_state_present_with_absent_role_should_create_it(
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_roles.run_module()
+        keycloak_role.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'Role role1 has been created.'
 
@@ -337,8 +337,8 @@ def mock_update_role_urls(mocker):
     {'client_id': 'client-with-role'}
 ], ids=['role in realm', 'role in client'])
 def test_state_present_with_present_role_should_update_it(monkeypatch, client_id, mock_update_role_urls):
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_roles.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -355,6 +355,6 @@ def test_state_present_with_present_role_should_update_it(monkeypatch, client_id
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_roles.run_module()
+        keycloak_role.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'Role role1 has been updated.'
