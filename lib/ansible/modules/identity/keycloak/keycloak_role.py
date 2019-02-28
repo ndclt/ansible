@@ -217,7 +217,7 @@ def run_module():
         create_role(kc, result, realm, given_role_id, client_id)
     else:
         if state == 'present':
-            updating_user(kc, result, realm, given_role_id, client_uuid)
+            updating_role(kc, result, realm, given_role_id, client_uuid)
         else:
             deleting_role(kc, result, realm, given_role_id, client_uuid)
 
@@ -339,7 +339,7 @@ def create_role(kc, result, realm, given_role_id, client_id):
     module.exit_json(**result)
 
 
-def updating_user(kc, result, realm, given_role_id, client_uuid):
+def updating_role(kc, result, realm, given_role_id, client_uuid):
     module = kc.module
     changeset = result['proposed']
     before_role = result['existing']
