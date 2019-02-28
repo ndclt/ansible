@@ -92,35 +92,32 @@ author:
 
 EXAMPLES = r'''
 - name: create or update keycloak role in realm (minimal example)
-- keycloak_role:
-    module: keycloak_roles
+  keycloak_role:
     auth_client_id: admin-cli
     auth_keycloak_url: http://auth.example.com/auth
     auth_realm: master
-    auth_user: USERNAME
+    auth_username: USERNAME
     auth_password: PASSWORD
     realm: master
     name: role-test-1
 
 - name: create or update keycloak role in client (minimal example)
-- keycloak_role:
-    module: keycloak_roles
+  keycloak_role:
     auth_client_id: admin-cli
     auth_keycloak_url: http://auth.example.com/auth
     auth_realm: master
-    auth_user: USERNAME
+    auth_username: USERNAME
     auth_password: PASSWORD
     realm: master
     client_id: client-with-role
     name: role-test-in-client-1
     
 - name: create or update keycloak role in realm (with everything)
-- keycloak_role:
-    module: keycloak_roles
+  keycloak_role:
     auth_client_id: admin-cli
     auth_keycloak_url: http://auth.example.com/auth
     auth_realm: master
-    auth_user: USERNAME
+    auth_username: USERNAME
     auth_password: PASSWORD
     realm: master
     name: role-test-1
