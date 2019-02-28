@@ -464,7 +464,7 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(
                 msg='Could not update user %s in realm %s: %s' % (
-                to_text(role_id.values[0]), realm, to_text(e)),
+                to_text(list(role_id.values())[0]), realm, to_text(e)),
                 user_representation=role_representation,
                 user_url=role_url
             )
