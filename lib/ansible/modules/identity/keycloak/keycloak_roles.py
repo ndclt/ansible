@@ -12,7 +12,164 @@ ANSIBLE_METADATA = {
     'supported_by': 'community'
 }
 
-DOCUMENTATION = '''
+DOCUMENTATION = r'''
+---
+module: keycloak_user
+
+short_description: Allows administration of Keycloak roles via Keycloak API
+
+version_added: "2.8"
+
+description:
+    - This module allows the administration of Keycloak roles via the Keycloak REST API. It
+      requires access to the REST API via OpenID Connect; the user connecting and the client being
+      used must have the requisite access rights. In a default Keycloak installation, admin-cli
+      and an admin user would work, as would a separate client definition with the scope tailored
+      to your needs and a user having the expected roles.
+    - The names of module options are snake_cased versions of the camelCase ones found in the
+      Keycloak API and its documentation at U(https://www.keycloak.org/docs-api/4.8/rest-api/index.html/).
+      Aliases are provided so camelCased versions can be used as well. If they are in conflict
+      with ansible names or previous used names, they will be prefixed by "keycloak".
+    - This module does not manage composite roles.
+
+options:
+    state:
+        description:
+            - State of the role.
+            - On C(present), the role will be created (or updated if it exists already).
+            - On C(absent), the role will be removed if it exists.
+        type: str
+        choices: [present, absent]
+        default: present
+        
+    realm:
+        description:
+            - The realm to create the client in.
+        type: str
+        default:'master
+        
+    attributes:
+        description:
+            – a dictionary with the key and the value to put in keycloak.
+            Keycloak will always return the value in a list of one element.
+            Keys and values are converted into string.
+        type: dict
+        required: false
+    
+    name:
+        description:
+            - the name of the role to modify.
+            - I(name) and I(id) are mutually exclusive.
+        type: str
+    
+    id:
+        description:
+            - the id (generally an uuid) of the role to modify.
+            - I(name) and I(id) are mutually exclusive.
+        type: str
+    
+    client_id:
+        description:
+            - client id of client where the role will be inserted. This is usually 
+            an alphanumeric name chosen by you.
+            - the client must exist before this call.
+        type: str
+        aliases: [ clientId ]
+        required: false
+    
+    description:
+        description:
+            - The description associate to your role.
+        type: str
+        required: false
+
+extends_documentation_fragment:
+    - keycloak
+author:
+    - Nicolas Duclert (@ndclt) <nicolas.duclert@metronlab.com>
+    
+'''
+
+EXAMPLES = r'''
+- name: create or update keycloak role in realm (minimal example)
+- keycloak_role:
+    module: keycloak_roles
+    auth_client_id: admin-cli
+    auth_keycloak_url: http://auth.example.com/auth
+    auth_realm: master
+    auth_user: USERNAME
+    auth_password: PASSWORD
+    realm: master
+    name: role-test-1
+
+- name: create or update keycloak role in client (minimal example)
+- keycloak_role:
+    module: keycloak_roles
+    auth_client_id: admin-cli
+    auth_keycloak_url: http://auth.example.com/auth
+    auth_realm: master
+    auth_user: USERNAME
+    auth_password: PASSWORD
+    realm: master
+    client_id: client-with-role
+    name: role-test-in-client-1
+    
+-name: create or update keycloak role in realm (with everything)
+- keycloak_role:
+    module: keycloak_roles
+    auth_client_id: admin-cli
+    auth_keycloak_url: http://auth.example.com/auth
+    auth_realm: master
+    auth_user: USERNAME
+    auth_password: PASSWORD
+    realm: master
+    name: role-test-1
+    description: a long description in order to know about this role
+    attributes: {"a key": "a value", "an other key": 12}
+
+'''
+
+RETURN = r'''
+msg:
+  description: Message as to what action was taken
+  returned: always
+  type: str
+  sample: "Role role-test has been updated"
+  
+proposed:
+    description: role representation of proposed changes to role
+    returned: always
+    type: dict
+    sample: {
+      "description": "a new description",
+      "attributes": {"onekey": "RS256"}
+    }
+
+existing:
+    description: role representation of existing role (sample is truncated)
+    returned: always
+    type: dict
+    sample: {
+        "name": "role-test",
+        "description": "The old description",
+        "composite": False,
+        "attributes": {
+            "onekey": ["RS256"],
+        }
+    }
+
+end_state:
+    description: role representation of role after module execution (sample is truncated)
+    returned: always
+    type: dict
+    sample: {
+        "name": "role-test",
+        "description": "a new description",
+        "composite": False,
+        "attributes": {
+            "onekey": ["RS256"],
+        }
+    }
 '''
 
 from ansible.module_utils._text import to_text
