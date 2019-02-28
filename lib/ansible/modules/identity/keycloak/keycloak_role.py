@@ -365,6 +365,11 @@ def updating_role(kc, result, realm, given_role_id, client_uuid):
         result['changed'] = (before_role != updated_role)
         module.exit_json(**result)
 
+    # put the current name in the change set in order to avoid a reset of the
+    # name which will make the role useless.
+    # See bug https://issues.jboss.org/browse/KEYCLOAK-9704 on keycloak.
+    changeset.update({'name': before_role['name']})
+
     if 'attributes' in changeset:
         changeset.update(
             {'attributes': put_attributes_values_in_list(changeset['attributes'])})
