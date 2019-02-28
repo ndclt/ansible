@@ -346,7 +346,7 @@ class KeycloakAPI(object):
 
     def get_role(self, role_id, realm='master', client_uuid=None):
         """ Obtain client template representation by id
-        :param role_id: id (not name) of role to be queried
+        :param role_id: id or name of role to be queried
         :param realm: role from this realm
         :return: dict of role representation or None if none matching exist
         """
@@ -380,7 +380,7 @@ class KeycloakAPI(object):
 
     def delete_role(self, role_id, realm="master"):
         """ Delete a role from Keycloak
-        :param role_id: id (not userId) of user to be deleted
+        :param role_id: id of role (uuid or name) to be deleted
         :param realm: realm of role to be deleted
         :return: HTTPResponse object on success
         """
@@ -433,9 +433,9 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not obtain url: %s' % (url))
 
     def create_role(self, role_representation, realm="master", client_uuid=None):
-        """ Create a user in keycloak
-        :param role_representation: user representation of user to be created. Must at least contain field userId
-        :param realm: realm for user to be created
+        """ Create a role in keycloak
+        :param role_representation: role representation of user to be created.
+        :param realm: realm for role to be created
         :return: HTTPResponse object on success
         """
         if client_uuid:
@@ -455,9 +455,9 @@ class KeycloakAPI(object):
 
     def update_role(self, role_id, role_representation, realm="master", client_uuid=None):
         """ Update an existing role
-        :param uuid: id of role to be updated in Keycloak
-        :param role_representation: corresponding (partial/full) user representation with updates
-        :param realm: realm the user is in
+        :param role_id: id of role to be updated in Keycloak
+        :param role_representation: corresponding (partial/full) role representation with updates
+        :param realm: realm the role is in
         :return: HTTPResponse object on success
         """
         if client_uuid:
