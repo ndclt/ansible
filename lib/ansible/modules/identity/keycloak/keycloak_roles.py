@@ -38,6 +38,8 @@ def run_module():
 
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
+                           required_one_of=([['name', 'id']]),
+                           mutually_exclusive=([['name', 'id']]),
                            )
     realm = module.params.get('realm')
     state = module.params.get('state')
