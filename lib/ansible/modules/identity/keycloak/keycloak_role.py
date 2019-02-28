@@ -122,7 +122,7 @@ EXAMPLES = r'''
     realm: master
     name: role-test-1
     description: a long description in order to know about this role
-    attributes: {"a key": "a value", "an other key": 12}
+    attributes: {"a key": ["a value"], "an other key": [12]}
 
 '''
 
