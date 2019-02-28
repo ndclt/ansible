@@ -326,6 +326,8 @@ def create_role(kc, result, realm, given_role_id, client_id):
 
     response = kc.create_role(role_to_create, realm=realm, client_uuid=client_uuid)
     if 'attributes' in result['proposed']:
+        # update the created role with attributes because keycloak does not
+        # take it into account when creating the role
         kc.update_role(given_role_id, role_to_create, realm=realm, client_uuid=client_uuid)
     after_user = kc.get_json_from_url(response.headers.get('Location'))
     result['end_state'] = after_user
