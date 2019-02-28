@@ -192,6 +192,9 @@ def run_module():
 
     argument_spec.update(meta_args)
 
+    # The id of the role is unique in keycloak and if it is given the
+    # client_id is not used. In order to avoid confusion, I set a mutual
+    # exclusion.
     module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True,
                            required_one_of=([['name', 'id']]),
