@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division, print_function)
 
 import json
@@ -8,7 +9,7 @@ import pytest
 from ansible.module_utils.six import StringIO
 from ansible.modules.identity.keycloak import keycloak_roles
 from units.modules.utils import (
-    AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args)
+    AnsibleExitJson, fail_json, exit_json, set_module_args)
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 
