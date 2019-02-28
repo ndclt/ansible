@@ -116,14 +116,12 @@ def mock_absent_role_url(mocker):
     absent_role_url = CONNECTION_DICT.copy()
     absent_role_url.update({
         'http://keycloak.url/auth/admin/realms/master/roles/absent': raise_404('master/roles/absent'),
-        'http://keycloak.url/auth/admin/realms/master/roles/00000000-0000-0000-0000-000000000000':
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/00000000-0000-0000-0000-000000000000':
             raise_404('roles/00000000-0000-0000-0000-000000000000'),
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=absent-client': create_wrapper(json.dumps({})),
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
         'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/absent':
-            raise_404('clients/11111111-1111-1111-1111-111111111111/roles/absent'),
-        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/00000000-0000-0000-0000-000000000000':
-            raise_404('clients/11111111-1111-1111-1111-111111111111/roles/absent/00000000-0000-0000-0000-000000000000')
+            raise_404('clients/11111111-1111-1111-1111-111111111111/roles/absent')
 
     })
     return mocker.patch(

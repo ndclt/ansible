@@ -197,9 +197,10 @@ def run_module():
                            )
     realm = module.params.get('realm')
     state = module.params.get('state')
-    given_role_id = module.params.get('name')
-    if not given_role_id:
-        given_role_id = module.params.get('id')
+    given_role_id = {'name': module.params.get('name')}
+    if not given_role_id['name']:
+        given_role_id.update({'uuid': module.params.get('id')})
+        given_role_id.pop('name')
     client_id = module.params.get('client_id')
 
     if not attributes_format_is_correct(module.params.get('attributes')):
@@ -292,20 +293,21 @@ def create_changeset(module):
 
 def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid):
     module = kc.module
+    message_role_id = list(given_role_id.values())[0]
     if module._diff:
         result['diff'] = dict(before='', after='')
     if client_id:
         if not client_uuid:
             result['msg'] = (
                 'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
-                % (to_text(client_id), realm, to_text(given_role_id)))
+                % (to_text(client_id), realm, to_text(message_role_id)))
         else:
             result['msg'] = (
                 'Role %s does not exist in client %s of realm %s, doing nothing.'
-                % (to_text(given_role_id), to_text(client_id), to_text(realm)))
+                % (to_text(message_role_id), to_text(client_id), to_text(realm)))
     else:
         result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
-                         % (to_text(given_role_id), to_text(realm)))
+                         % (to_text(message_role_id), to_text(realm)))
     module.exit_json(**result)
 
 
@@ -335,7 +337,7 @@ def create_role(kc, result, realm, given_role_id, client_id):
         kc.update_role(given_role_id, role_to_create, realm=realm, client_uuid=client_uuid)
     after_user = kc.get_json_from_url(response.headers.get('Location'))
     result['end_state'] = after_user
-    result['msg'] = 'Role %s has been created.' % given_role_id
+    result['msg'] = 'Role %s has been created.' % to_text(given_role_id['name'])
     module.exit_json(**result)
 
 
@@ -370,7 +372,7 @@ def updating_role(kc, result, realm, given_role_id, client_uuid):
             after=after_role)
 
     result['end_state'] = after_role
-    result['msg'] = 'Role %s has been updated.' % given_role_id
+    result['msg'] = 'Role %s has been updated.' % to_text(list(given_role_id.values())[0])
     module.exit_json(**result)
 
 
@@ -397,7 +399,7 @@ def deleting_role(kc, result, realm, given_role_id, client_uuid):
     kc.delete_role(asked_id, realm=realm)
     result['proposed'] = dict()
     result['end_state'] = dict()
-    result['msg'] = 'Role %s has been deleted.' % given_role_id
+    result['msg'] = 'Role %s has been deleted.' % to_text(list(given_role_id.values())[0])
     module.exit_json(**result)
 
 

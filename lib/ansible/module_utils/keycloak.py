@@ -344,23 +344,32 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not delete client template %s in realm %s: %s'
                                       % (id, realm, str(e)))
 
+    def get_role_url(self, role_id, realm='master', client_uuid=None):
+        if 'name' in role_id:
+            role_name = role_id['name']
+            if client_uuid:
+                rolelist_url = URL_CLIENT_ROLE.format(
+                    url=self.baseurl, realm=quote(realm), id=client_uuid,
+                    role_id=quote(role_name))
+            else:
+                rolelist_url = URL_REALM_ROLE.format(
+                    url=self.baseurl, realm=quote(realm), role_id=quote(role_name))
+        else:
+            rolelist_url = URL_REALM_ROLE_BY_ID.format(
+                url=self.baseurl, realm=realm, id=role_id['uuid'])
+        return rolelist_url
+
     def get_role(self, role_id, realm='master', client_uuid=None):
         """ Obtain client template representation by id
         :param role_id: id or name of role to be queried
         :param realm: role from this realm
         :return: dict of role representation or None if none matching exist
         """
-        if client_uuid:
-            rolelist_url = URL_CLIENT_ROLE.format(
-                url=self.baseurl, realm=quote(realm), id=client_uuid,
-                role_id=quote(role_id))
-        else:
-            rolelist_url = URL_REALM_ROLE.format(
-                url=self.baseurl, realm=quote(realm), role_id=quote(role_id))
+        role_url = self.get_role_url(role_id, realm, client_uuid)
 
         try:
             return json.load(
-                open_url(rolelist_url, method='GET', headers=self.restheaders,
+                open_url(role_url, method='GET', headers=self.restheaders,
                          validate_certs=self.validate_certs))
         except HTTPError as e:
             if e.code == 404:
@@ -368,15 +377,15 @@ class KeycloakAPI(object):
             else:
                 self.module.fail_json(
                     msg='Could not obtain role %s for realm %s: %s'
-                        % (role_id, realm, to_text(e)))
+                        % (to_text(list(role_id.values())[0]), to_text(realm), to_text(e)))
         except ValueError as e:
             self.module.fail_json(
                 msg='API returned incorrect JSON when trying to obtain role %s for realm %s: %s'
-                    % (role_id, realm, to_text(e)))
+                    % (to_text(list(role_id.values())[0]), to_text(realm), to_text(e)))
         except Exception as e:
             self.module.fail_json(
                 msg='Could not obtain role %s for realm %s: %s'
-                    % (role_id, realm, to_text(e)))
+                    % (to_text(list(role_id.values())[0]),  to_text(realm), to_text(e)))
 
     def delete_role(self, role_id, realm="master"):
         """ Delete a role from Keycloak
@@ -404,20 +413,6 @@ class KeycloakAPI(object):
             return result['id']
         else:
             return None
-
-    def get_roles_in_client(self, client_uuid, realm):
-        url = URL_CLIENT.format(url=self.baseurl, realm=realm, id=client_uuid) + '/roles/'
-
-        try:
-            roles_json = json.load(open_url(url, method='GET', headers=self.restheaders,
-                                           validate_certs=self.validate_certs))
-            return roles_json
-        except ValueError as e:
-            self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
-                                      % (realm, to_text(e)))
-        except Exception as e:
-            self.module.fail_json(msg='Could not obtain list of clients for realm %s: %s'
-                                      % (realm, to_text(e)))
 
     def get_json_from_url(self, url):
         try:
@@ -460,22 +455,16 @@ class KeycloakAPI(object):
         :param realm: realm the role is in
         :return: HTTPResponse object on success
         """
-        if client_uuid:
-            rolelist_url = URL_CLIENT_ROLE.format(
-                url=self.baseurl, realm=quote(realm), id=client_uuid,
-                role_id=quote(role_id))
-        else:
-            rolelist_url = URL_REALM_ROLE.format(
-                url=self.baseurl, realm=quote(realm), role_id=quote(role_id))
+        role_url = self.get_role_url(role_id, realm, client_uuid)
 
         try:
-            return open_url(rolelist_url, method='PUT', headers=self.restheaders,
+            return open_url(role_url, method='PUT', headers=self.restheaders,
                             data=json.dumps(role_representation),
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(
                 msg='Could not update user %s in realm %s: %s' % (
-                role_id, realm, str(e)),
+                to_text(role_id.values[0]), realm, to_text(e)),
                 user_representation=role_representation,
-                user_url=rolelist_url
+                user_url=role_url
             )
