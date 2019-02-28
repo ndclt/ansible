@@ -14,7 +14,7 @@ ANSIBLE_METADATA = {
 
 DOCUMENTATION = r'''
 ---
-module: keycloak_user
+module: keycloak_role
 
 short_description: Allows administration of Keycloak roles via Keycloak API
 
@@ -114,7 +114,7 @@ EXAMPLES = r'''
     client_id: client-with-role
     name: role-test-in-client-1
     
--name: create or update keycloak role in realm (with everything)
+- name: create or update keycloak role in realm (with everything)
 - keycloak_role:
     module: keycloak_roles
     auth_client_id: admin-cli
