@@ -29,9 +29,9 @@ def run_module():
         realm=dict(type='str', default='master'),
         name=dict(type='str'),
         id=dict(type='str'),
-        client_id=dict(type='str', aliases=['clientId']),
-        description=dict(type='str'),
-        attributes=dict(type='dict'),
+        client_id=dict(type='str', aliases=['clientId'], required=False),
+        description=dict(type='str', required=False),
+        attributes=dict(type='dict', required=False),
     )
 
     argument_spec.update(meta_args)
@@ -43,7 +43,7 @@ def run_module():
     state = module.params.get('state')
     given_role_id = module.params.get('name')
     if not given_role_id:
-        given_role_id= module.params.get('id')
+        given_role_id = module.params.get('id')
     client_id = module.params.get('client_id')
 
     if not attributes_format_is_correct(module.params.get('attributes')):
