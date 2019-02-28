@@ -324,8 +324,12 @@ def create_role(kc, result, realm, given_role_id, client_id):
     if module.check_mode:
         module.exit_json(**result)
 
+    if 'attributes' in role_to_create:
+        role_to_create.update(
+            {'attributes': put_attributes_values_in_list(role_to_create['attributes'])})
+
     response = kc.create_role(role_to_create, realm=realm, client_uuid=client_uuid)
-    if 'attributes' in result['proposed']:
+    if 'attributes' in role_to_create:
         # update the created role with attributes because keycloak does not
         # take it into account when creating the role
         kc.update_role(given_role_id, role_to_create, realm=realm, client_uuid=client_uuid)
@@ -352,6 +356,9 @@ def updating_user(kc, result, realm, given_role_id, client_uuid):
         result['changed'] = (before_role != updated_role)
         module.exit_json(**result)
 
+    if 'attributes' in changeset:
+        changeset.update(
+            {'attributes': put_attributes_values_in_list(changeset['attributes'])})
     kc.update_role(given_role_id, changeset, realm=realm, client_uuid=client_uuid)
     after_role = kc.get_role(given_role_id, realm=realm, client_uuid=client_uuid)
     if before_role == after_role:
@@ -365,6 +372,16 @@ def updating_user(kc, result, realm, given_role_id, client_uuid):
     result['end_state'] = after_role
     result['msg'] = 'Role %s has been updated.' % given_role_id
     module.exit_json(**result)
+
+
+def put_attributes_values_in_list(attributes_values):
+    new_attributes = {}
+    for key, value in attributes_values.items():
+        if not isinstance(value, list):
+            new_attributes.update({key: [value]})
+        else:
+            new_attributes.update({key: value})
+    return new_attributes
 
 
 def deleting_role(kc, result, realm, given_role_id, client_uuid):
