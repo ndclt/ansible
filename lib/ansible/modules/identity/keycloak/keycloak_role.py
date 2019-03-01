@@ -46,7 +46,7 @@ options:
         description:
             - The realm to create the client in.
         type: str
-        default:'master
+        default: master
         
     attributes:
         description:
@@ -72,7 +72,7 @@ options:
     client_id:
         description:
             - client id of client where the role will be inserted. This is usually 
-            an alphanumeric name chosen by you.
+              an alphanumeric name chosen by you.
             - the client must exist before this call.
             - I(id) and I(client_id) are mutually exclusive.
         type: str
