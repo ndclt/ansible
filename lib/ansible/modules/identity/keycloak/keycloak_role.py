@@ -267,12 +267,12 @@ def get_initial_role(given_role_id, kc, realm, client_id):
     return before_role, client_uuid
 
 
-def create_result(before_user, module):
+def create_result(before_role, module):
     changeset = create_changeset(module)
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
                   end_state={})
     result['proposed'] = changeset
-    result['existing'] = before_user
+    result['existing'] = before_role
     return result
 
 
@@ -342,8 +342,8 @@ def create_role(kc, result, realm, given_role_id, client_id):
         # update the created role with attributes because keycloak does not
         # take it into account when creating the role
         kc.update_role(given_role_id, role_to_create, realm=realm, client_uuid=client_uuid)
-    after_user = kc.get_json_from_url(response.headers.get('Location'))
-    result['end_state'] = after_user
+    after_role = kc.get_json_from_url(response.headers.get('Location'))
+    result['end_state'] = after_role
     result['msg'] = 'Role %s has been created.' % to_text(given_role_id['name'])
     module.exit_json(**result)
 
@@ -357,7 +357,7 @@ def updating_role(kc, result, realm, given_role_id, client_uuid):
     result['changed'] = True
 
     if module.check_mode:
-        # We can only compare the current user with the proposed updates we have
+        # We can only compare the current role with the proposed updates we have
         if module._diff:
             result['diff'] = dict(
                 before=before_role,
