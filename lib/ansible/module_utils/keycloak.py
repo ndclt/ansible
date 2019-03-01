@@ -416,20 +416,20 @@ class KeycloakAPI(object):
 
     def get_json_from_url(self, url):
         try:
-            user_json = json.load(
+            role_json = json.load(
                 open_url(url, method='GET', headers=self.restheaders,
                          validate_certs=self.validate_certs))
-            return user_json
+            return role_json
         except ValueError as e:
             self.module.fail_json(
                 msg='API returned incorrect JSON when trying to get: %s' % (
-                    url))
+                    to_text(url)))
         except Exception as e:
-            self.module.fail_json(msg='Could not obtain url: %s' % (url))
+            self.module.fail_json(msg='Could not obtain url: %s' % to_text(url))
 
     def create_role(self, role_representation, realm="master", client_uuid=None):
         """ Create a role in keycloak
-        :param role_representation: role representation of user to be created.
+        :param role_representation: role representation to be created.
         :param realm: realm for role to be created
         :return: HTTPResponse object on success
         """
@@ -444,9 +444,10 @@ class KeycloakAPI(object):
             return open_url(role_url, method='POST', headers=self.restheaders,
                             data=json.dumps(role_representation), validate_certs=self.validate_certs)
         except Exception as e:
-            self.module.fail_json(msg='Could not create user %s in realm %s: %s'
-                                      % (role_representation['name'], realm, str(e)),
-                                  payload=role_representation)
+            self.module.fail_json(
+                msg='Could not create role %s in realm %s: %s'
+                    % (to_text(role_representation['name']), to_text(realm), to_text(e)),
+                payload=role_representation)
 
     def update_role(self, role_id, role_representation, realm="master", client_uuid=None):
         """ Update an existing role
@@ -463,8 +464,8 @@ class KeycloakAPI(object):
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(
-                msg='Could not update user %s in realm %s: %s' % (
-                to_text(list(role_id.values())[0]), realm, to_text(e)),
-                user_representation=role_representation,
-                user_url=role_url
+                msg='Could not update role %s in realm %s: %s' % (
+                    to_text(list(role_id.values())[0]), to_text(realm), to_text(e)),
+                role_representation=role_representation,
+                role_url=role_url
             )
