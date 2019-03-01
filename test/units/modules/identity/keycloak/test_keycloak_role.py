@@ -9,7 +9,8 @@ import pytest
 from ansible.module_utils.six import StringIO
 from ansible.modules.identity.keycloak import keycloak_role
 from units.modules.utils import (
-    AnsibleExitJson, fail_json, exit_json, set_module_args)
+    AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args)
+from ansible.module_utils._text import to_text
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 
@@ -131,6 +132,24 @@ def mock_absent_role_url(mocker):
     )
 
 
+@pytest.mark.parametrize('mutual_exclusive', [
+    {'name': 'a', 'id': 'very-long-uuid'},
+    {'id': 'very-long-uuid', 'client_id': 'client-with-role'}
+])
+def test_mutually_exclusive_arguments_should_raise_an_error(monkeypatch, mutual_exclusive):
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
+    set_module_args(mutual_exclusive.copy())
+
+    with pytest.raises(AnsibleFailJson) as exec_error:
+        keycloak_role.run_module()
+
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == 'parameters are mutually exclusive: %s' % (
+        to_text(', '.join(mutual_exclusive.keys())))
+    print(ansible_exit_json)
+
+
 @pytest.mark.parametrize('role_identifier,error_message', [
     ({'name': 'absent'}, 'Role absent does not exist in realm master'),
     ({'id': '00000000-0000-0000-0000-000000000000'},
@@ -139,10 +158,8 @@ def mock_absent_role_url(mocker):
      'Client absent-client does not exist in master, cannot found role absent in it'),
     ({'client_id': 'client-with-role', 'name': 'absent'},
      'Role absent does not exist in client client-with-role of realm master'),
-    ({'client_id': 'client-with-role', 'id': '00000000-0000-0000-0000-000000000000'},
-     'Role 00000000-0000-0000-0000-000000000000 does not exist in client client-with-role of realm master'),
 ], ids=['with name', 'with id', 'role in client, client does not exist',
-        'role name in client with id', 'role id in client with id'])
+        'role name in client with id'])
 def test_state_absent_should_not_create_absent_role(
         monkeypatch, role_identifier, error_message, mock_absent_role_url):
     """This function mainly test the get_initial_role and do_nothing_and_exit functions
