@@ -415,6 +415,9 @@ def deleting_role(kc, result, realm, given_role_id, client_uuid):
     module.exit_json(**result)
 
 
-if __name__ == '__main__':
+def main():
     run_module()
 
+
+if __name__ == '__main__':
+    main()
