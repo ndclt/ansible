@@ -322,6 +322,14 @@ def mock_update_role_urls(mocker):
             ],
             'PUT': None
         },
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/ffffffff-1111-1111-1111-111111111111':{
+            'GET': [
+                create_wrapper(json.dumps(update_created_role(into_client=False))),
+                create_wrapper(json.dumps(update_created_role(
+                    into_client=False, to_append={'attributes': {'a': ["12"], 'b': ['test']}}))),
+            ],
+            'PUT': None
+        }
     })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
@@ -330,11 +338,13 @@ def mock_update_role_urls(mocker):
     )
 
 
-@pytest.mark.parametrize('client_id', [
-    {},
-    {'client_id': 'client-with-role'}
-], ids=['role in realm', 'role in client'])
-def test_state_present_with_present_role_should_update_it(monkeypatch, client_id, mock_update_role_urls):
+@pytest.mark.parametrize('extra_arguments', [
+    {'name': 'role1'},
+    {'name': 'role1', 'client_id': 'client-with-role'},
+    {'id': 'ffffffff-1111-1111-1111-111111111111'}
+], ids=['role in realm identified by name', 'role in client identified by name',
+        'role identified by id'])
+def test_state_present_with_present_role_should_update_it(monkeypatch, extra_arguments, mock_update_role_urls):
     monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
@@ -344,15 +354,15 @@ def test_state_present_with_present_role_should_update_it(monkeypatch, client_id
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'present',
-        'name': 'role1',
         'description': 'change description',
         'attributes': {'a': ["12"], 'b': ['test']}
     }
-    arguments.update(client_id)
+    arguments.update(extra_arguments)
 
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
         keycloak_role.run_module()
     ansible_exit_json = exec_error.value.args[0]
-    assert ansible_exit_json['msg'] == 'Role role1 has been updated.'
+    role_identifier = list(extra_arguments.values())[0]
+    assert ansible_exit_json['msg'] == 'Role %s has been updated.' % (role_identifier)
