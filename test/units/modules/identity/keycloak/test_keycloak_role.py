@@ -199,7 +199,10 @@ def mock_delete_role_urls(mocker):
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
         'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/to%20delete': create_wrapper(json.dumps(to_delete_role_in_client)),
         'http://keycloak.url/auth/admin/realms/master/roles-by-id/cccccccc-d943-4274-9953-8b6a930ee74e': None,
-        'http://keycloak.url/auth/admin/realms/master/roles-by-id/bbbbbbbb-acca-463b-bd93-2e7fd66022f6': None
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/bbbbbbbb-acca-463b-bd93-2e7fd66022f6': {
+            'DELETE': None,
+            'GET': create_wrapper(json.dumps(to_delete_role_in_master))
+        }
     })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
@@ -208,12 +211,14 @@ def mock_delete_role_urls(mocker):
     )
 
 
-@pytest.mark.parametrize('client_id', [
-    {},
-    {'client_id': 'client-with-role'}
-], ids=['role in realm', 'role in client'])
+@pytest.mark.parametrize('extra_arguments', [
+    {'name': 'to delete'},
+    {'name': 'to delete', 'client_id': 'client-with-role'},
+    {'id': 'bbbbbbbb-acca-463b-bd93-2e7fd66022f6'}
+], ids=['role in realm identified by name', 'role in client identified by name',
+        'role identified by id'])
 def test_state_absent_with_existing_role_should_delete_the_role(
-        monkeypatch, client_id, mock_delete_role_urls):
+        monkeypatch, extra_arguments, mock_delete_role_urls):
     monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
@@ -223,15 +228,15 @@ def test_state_absent_with_existing_role_should_delete_the_role(
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
-        'name': 'to delete'
     }
-    arguments.update(client_id)
+    arguments.update(extra_arguments)
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
         keycloak_role.run_module()
     ansible_exit_json = exec_error.value.args[0]
-    assert ansible_exit_json['msg'] == 'Role to delete has been deleted.'
+    role_identifier = list(extra_arguments.values())[0]
+    assert ansible_exit_json['msg'] == 'Role %s has been deleted.' % role_identifier
 
 
 class CreatedUserMockResponse(object):
