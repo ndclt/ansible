@@ -35,16 +35,16 @@ description:
 options:
     state:
         description:
-            - State of the client
-            - On C(present), the client will be created (or updated if it exists already).
-            - On C(absent), the client will be removed if it exists
-        choices: ['present', 'absent']
-        default: 'present'
+            - State of the user
+            - On C(present), the user will be created (or updated if it exists already).
+            - On C(absent), the user will be removed if it exists
+        choices: [ present, absent ]
+        default: present
 
     realm:
         description:
-            - The realm to create the client in.
-        default: 'master'
+            - The realm to create the user in.
+        default: master
 
     attributes:
         description:
@@ -57,23 +57,20 @@ options:
         description:
             - user_id of client to be worked on. This is usually an UUID. This and I(client_username)
               are mutually exclusive.
-        aliases:
-            - userId
+        aliases: [ userId ]
 
     keycloak_username:
         description:
-            - username of client to be worked on. This and I(user_id) are mutually exclusive.
+            - username of user to be worked on. This and I(user_id) are mutually exclusive.
             - keycloak lower the username
-        aliases:
-            - keycloakUsername
+        aliases: [ keycloakUsername ]
 
     email_verified:
         description:
             - show if the user email have been verified
         required: false
         type: bool
-        aliases:
-            - emailVerified
+        aliases: [ emailVerified ]
 
     enabled:
         description:
@@ -93,21 +90,18 @@ options:
         description:
             - a list of actions to be done by the user
             - each element must be in the choices
-        choices: ['UPDATE_PROFILE', 'VERIFY_EMAIL', 'UPDATE_PASSWORD', 'CONFIGURE_TOTP']
-        aliases:
-            - requiredActions
+        choices: [ UPDATE_PROFILE, VERIFY_EMAIL, UPDATE_PASSWORD, CONFIGURE_TOTP ]
+        aliases: [ requiredActions ]
 
     first_name:
         description:
             - the user first name
-        aliases:
-            - firstName
+        aliases: [ firstName ]
 
     last_name:
         description:
             - the user last name
-        aliases:
-            - lastName
+        aliases: [ lastName ]
 
 extends_documentation_fragment:
     - keycloak
@@ -119,39 +113,36 @@ author:
 EXAMPLES = '''
 # Pass in a message
 - name: Create or update Keycloak users template (minimal)
-  local_action:
-    module: keycloak_user
+  keycloak_user:
     auth_client_id: admin-cli
     auth_keycloak_url: http://localhost:8080/auth
     auth_realm: master
-    auth_username: nd
-    auth_password: nd
+    auth_username: admin_test
+    auth_password: admin_password
     keycloak_username: userTest1
 - name: Delete previous user
-  local_action:
-    module: keycloak_user
+  keycloak_user:
     auth_client_id: admin-cli
     auth_keycloak_url: http://localhost:8080/auth
     auth_realm: master
-    auth_username: nd
-    auth_password: nd
+    auth_username: admin_test
+    auth_password: admin_password
     keycloak_username: userTest1
     state: absent
 - name: Update keycloak user with all options
-  local_action:
-    module: keycloak_user
+  keycloak_user:
     auth_client_id: admin-cli
     auth_keycloak_url: http://localhost:8080/auth
     auth_realm: master
-    auth_username: nd
-    auth_password: nd
+    auth_username: admin_test
+    auth_password: admin_password
     keycloak_username: userTest1
-    email_verified: True
-    enabled: True
+    email_verified: yes
+    enabled: yes
     email: userTest@domain.org
     first_name: user
     last_name: test
-    required_actions: ['UPDATE_PROFILE', 'CONFIGURE_TOTP']
+    required_actions: [ UPDATE_PROFILE, CONFIGURE_TOTP ]
     attributes: {'one key': 'one value', 'another key': 42}
 '''
 
@@ -283,6 +274,7 @@ def attributes_format_is_correct(given_attributes):
         if isinstance(one_value, list):
             if not attribute_as_list_format_is_correct(one_value):
                 return False
+            continue
         if isinstance(one_value, dict):
             return False
         if not isinstance(one_value, AUTHORIZED_ATTRIBUTE_VALUE_TYPE):
