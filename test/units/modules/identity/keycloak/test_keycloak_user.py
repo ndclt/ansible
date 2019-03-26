@@ -340,21 +340,6 @@ def test_state_present_should_update_existing_user(monkeypatch, dynamic_url_for_
     assert ansible_exit_json['end_state'] == json.loads(UPDATED_USER)
 
 
-def test_user_and_id_in_arguments_should_raise_an_error(monkeypatch):
-    monkeypatch.setattr(keycloak_user.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_user.AnsibleModule, 'fail_json', fail_json)
-    arguments = {
-        'keycloak_username': 'user1',
-        'user_id': '00000000-51d0-4aa9-8cb7-667f53e62e90',
-    }
-    set_module_args(arguments)
-    with pytest.raises(AnsibleFailJson) as exec_error:
-        keycloak_user.main()
-    ansible_failed_json = exec_error.value.args[0]
-    assert ansible_failed_json['msg'] == (
-        'parameters are mutually exclusive: keycloak_username, user_id')
-
-
 @pytest.mark.parametrize('wrong_attributes', [
     {'list1': ['a', 'b', 'c']},
     {'list2': [['a', 2, 3]]},
