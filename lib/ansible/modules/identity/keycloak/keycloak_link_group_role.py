@@ -18,6 +18,8 @@ def run_module():
         group_name=dict(type='str'),
         group_id=dict(type='str'),
         client_id=dict(type='str', aliases=['clientId'], required=False),
+        role_name=dict(type='str', aliases=['roleName']),
+        role_id=dict(type='str', aliases=['roleId']),
     )
 
     argument_spec.update(meta_args)
@@ -30,12 +32,14 @@ def run_module():
         supports_check_mode=True,
         required_one_of=[
             ['keycloak_username', 'user_id'],
-            ['group_name', 'groupd_id']
+            ['group_name', 'group_id'],
+            ['role_name', 'role_id'],
         ],
         mutually_exclusive=[
             ['keycloak_username', 'user_id'],
             ['group_name', 'groupd_id'],
             ['id', 'client_id'],
+            ['role_name', 'role_id'],
         ],
     )
     realm = module.params.get('realm')
@@ -52,6 +56,7 @@ def run_module():
         given_role_id.pop('name')
     client_id = module.params.get('client_id')
     kc = KeycloakAPI(module)
+    role_uuid = kc.get_role_id(given_role_id, realm, client_uuid=client_id)
 
 
 def main():
