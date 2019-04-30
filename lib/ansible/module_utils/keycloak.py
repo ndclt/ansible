@@ -50,6 +50,8 @@ URL_CLIENTTEMPLATE = "{url}/admin/realms/{realm}/client-templates/{id}"
 URL_CLIENTTEMPLATES = "{url}/admin/realms/{realm}/client-templates"
 URL_GROUPS = "{url}/admin/realms/{realm}/groups"
 URL_GROUP = "{url}/admin/realms/{realm}/groups/{groupid}"
+URL_EFFECTIVE_REALM_ROLE_IN_GROUP = "{url}/admin/realms/{realm}/groups/{group_id}/role-mappings/realm/composite"
+URL_EFFECTIVE_CLIENT_ROLE_IN_GROUP = "{url}/admin/realms/{realm}/groups/{group_id}/role-mappings/clients/{client_uuid}/composite"
 
 URL_USERS = "{url}/admin/realms/{realm}/users"
 URL_USER = "{url}/admin/realms/{realm}/users/{id}"
@@ -540,6 +542,20 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(msg="Could not fetch group %s in realm %s: %s"
                                       % (name, realm, str(e)))
+
+    def get_realm_roles_of_group(self, group_uuid, realm):
+        effective_role_url = URL_EFFECTIVE_REALM_ROLE_IN_GROUP.format(
+            url=self.baseurl,
+            group_id=group_uuid,
+            realm=realm,
+        )
+        try:
+            return json.load(open_url(url=effective_role_url, method="GET",
+                                      headers=self.restheaders,
+                                      validate_certs=self.validate_certs))
+        except Exception as e:
+            self.module.fail_json(
+                msg="Could not fetch group role %s in realm %s: %s" % (group_uuid, realm, str(e)))
 
     def create_group(self, grouprep, realm="master"):
         """ Create a Keycloak group.

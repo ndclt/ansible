@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from itertools import chain
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -13,10 +14,8 @@ def run_module():
         state=dict(type='str', default='present',
                    choices=['present', 'absent']),
         realm=dict(type='str', default='master'),
-        keycloak_username=dict(type='str', aliases=['keycloakUsername']),
-        user_id=dict(type='str', aliases=['userId']),
-        group_name=dict(type='str'),
-        group_id=dict(type='str'),
+        group_name=dict(type='str', required=False),
+        group_id=dict(type='str', required=False),
         client_id=dict(type='str', aliases=['clientId'], required=False),
         role_name=dict(type='str', aliases=['roleName']),
         role_id=dict(type='str', aliases=['roleId']),
@@ -31,12 +30,10 @@ def run_module():
         argument_spec=argument_spec,
         supports_check_mode=True,
         required_one_of=[
-            ['keycloak_username', 'user_id'],
             ['group_name', 'group_id'],
             ['role_name', 'role_id'],
         ],
         mutually_exclusive=[
-            ['keycloak_username', 'user_id'],
             ['group_name', 'groupd_id'],
             ['id', 'client_id'],
             ['role_name', 'role_id'],
@@ -44,19 +41,37 @@ def run_module():
     )
     realm = module.params.get('realm')
     state = module.params.get('state')
-    given_user_id = {'name': module.params.get('keycloak_username')}
-    if not given_user_id['name']:
-        given_user_id.update({'id': module.params.get('user_id')})
-        given_user_id.pop('name')
-    else:
-        given_user_id.update({'name': given_user_id['name'].lower()})
-    given_role_id = {'name': module.params.get('name')}
+    result = {}
+    kc = KeycloakAPI(module)
+
+    given_role_id = {'name': module.params.get('role_name')}
     if not given_role_id['name']:
-        given_role_id.update({'uuid': module.params.get('id')})
+        given_role_id.update({'uuid': module.params.get('role_id')})
         given_role_id.pop('name')
     client_id = module.params.get('client_id')
-    kc = KeycloakAPI(module)
+
     role_uuid = kc.get_role_id(given_role_id, realm, client_uuid=client_id)
+
+    group_name = module.params.get('group_name')
+    if group_name:
+        existing_group = kc.get_group_by_name(group_name, realm)
+        group_id = existing_group['id']
+        given_group_id = group_name
+    else:
+        group_id = module.params.get('group_id')
+        given_group_id = group_id
+
+    existing_role_uuid = [role['id'] for role in kc.get_realm_roles_of_group(group_id, realm)]
+
+    if state == 'absent':
+        if role_uuid not in existing_role_uuid:
+            result['msg'] = 'Links between {group_id} and {role_id} does not exist, doing nothing.'.format(
+                group_id=given_group_id,
+                role_id=list(given_role_id.values())[0]
+            )
+            result['changed'] = False
+            result['link_group_role'] = []
+    module.exit_json(**result)
 
 
 def main():
