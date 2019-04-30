@@ -61,14 +61,29 @@ def run_module():
         group_id = module.params.get('group_id')
         given_group_id = group_id
 
-    existing_role_uuid = [role['id'] for role in kc.get_realm_roles_of_group(group_id, realm)]
+    if client_id:
+        client_uuid = kc.get_client_id(client_id, realm)
+        existing_role_uuid = [role['id'] for role in kc.get_client_roles_of_group(group_id, client_uuid, realm)]
+    else:
+        existing_role_uuid = [role['id'] for role in kc.get_realm_roles_of_group(group_id, realm)]
 
     if state == 'absent':
         if role_uuid not in existing_role_uuid:
-            result['msg'] = 'Links between {group_id} and {role_id} does not exist, doing nothing.'.format(
-                group_id=given_group_id,
-                role_id=list(given_role_id.values())[0]
-            )
+            if client_id:
+                result['msg'] = to_text(
+                    'Links between {group_id} and {role_id} in {client_id} does_not_exist, '
+                    'doing nothing.'.format(
+                        group_id=given_group_id,
+                        role_id=list(given_role_id.values())[0],
+                        client_id=client_id
+                ))
+            else:
+                result['msg'] = to_text(
+                    'Links between {group_id} and {role_id} does not exist, doing nothing.'.format(
+                        group_id=given_group_id,
+                        role_id=list(given_role_id.values())[0]
+                    )
+                )
             result['changed'] = False
             result['link_group_role'] = []
     module.exit_json(**result)
