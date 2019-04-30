@@ -18,7 +18,7 @@ def test_state_absent_without_link_should_not_do_something(monkeypatch):
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
-        'keycloak_username': 'one_user',
+        'group_name': 'one_group',
         'role_name': 'one_role'
     }
 
@@ -27,4 +27,4 @@ def test_state_absent_without_link_should_not_do_something(monkeypatch):
         keycloak_link_group_role.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == (
-        'Links between one_user and one_role does not exist, doing nothing.')
+        'Links between one_group and one_role does not exist, doing nothing.')
