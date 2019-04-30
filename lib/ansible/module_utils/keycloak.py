@@ -408,13 +408,13 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not delete role %s in realm %s: %s'
                                       % (role_id, realm, to_text(e)))
 
-    def get_role_id(self, name, realm='master', client_uuid=None):
+    def get_role_id(self, role_id, realm='master', client_uuid=None):
         """ Obtain role id by name
-        :param name: name of role to be queried
+        :param role_id: id or name of role to be queried
         :param realm: realm to be queried
         :return: role id (usually a UUID)
         """
-        result = self.get_role(name, realm, client_uuid)
+        result = self.get_role(role_id, realm, client_uuid)
         if isinstance(result, dict) and 'id' in result:
             return result['id']
         else:
