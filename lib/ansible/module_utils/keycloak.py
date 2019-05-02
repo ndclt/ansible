@@ -576,6 +576,13 @@ class KeycloakAPI(object):
                     group_uuid, client_uuid, realm, str(e)))
 
     def create_link_between_group_and_role(self, group_uuid, role, client_uuid=None, realm='master'):
+        self._modify_link_between_group_and_role('POST', group_uuid, role, client_uuid, realm)
+
+    def delete_link_between_group_and_role(self, group_uuid, role, client_uuid=None, realm='master'):
+        self._modify_link_between_group_and_role('DELETE', group_uuid, role, client_uuid, realm)
+
+    def _modify_link_between_group_and_role(
+            self, method, group_uuid, role, client_uuid=None, realm='master'):
         if client_uuid:
             url = URL_CLIENT_ROLE_IN_GROUP.format(
                 url=self.baseurl,
@@ -590,7 +597,7 @@ class KeycloakAPI(object):
                 group_id=group_uuid
             )
         try:
-            return open_url(url=url, method='POST', headers=self.restheaders,
+            return open_url(url=url, method=method, headers=self.restheaders,
                             validate_certs=self.validate_certs, data=json.dumps([role]))
         except Exception as e:
             self.module.fail_json(

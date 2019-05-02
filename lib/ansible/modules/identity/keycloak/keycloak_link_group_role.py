@@ -87,7 +87,22 @@ def run_module():
                     )
                 )
             result['changed'] = False
-            result['roles_in_group'] = {}
+        else:
+            kc.delete_link_between_group_and_role(group_uuid, existing_role, client_uuid, realm)
+            if client_id:
+                result['msg'] = 'Links between {group_id} and {role_id} in {client_id} deleted.'.format(
+                    group_id=given_group_id,
+                    role_id=list(given_role_id.values())[0],
+                    client_id=client_id
+                )
+            else:
+                result['msg'] = 'Links between {group_id} and {role_id} deleted.'.format(
+                    group_id=given_group_id,
+                    role_id=list(given_role_id.values())[0],
+                )
+        result['roles_in_group'] = {}
+
+
     else:
         if role_uuid not in existing_role_uuid:
             kc.create_link_between_group_and_role(group_uuid, existing_role, client_uuid, realm)
