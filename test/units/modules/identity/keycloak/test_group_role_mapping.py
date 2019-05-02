@@ -33,10 +33,15 @@ def test_state_absent_without_link_should_not_do_something(monkeypatch, extra_ar
         keycloak_link_group_role.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
-    assert ansible_exit_json['link_group_role'] == []
+    assert ansible_exit_json['roles_in_group'] == {}
 
 
-def test_state_present_without_link_should_create_link(monkeypatch):
+@pytest.mark.parametrize('extra_arguments, waited_message', [
+    ({'group_name': 'to_link', 'role_name': 'one_role'}, 'Link between to_link and one_role created.'),
+    ({'group_name': 'to_link', 'role_name': 'role_to_link_in_client', 'client_id': 'one_client'},
+     'Link between to_link and role_to_link_in_client in one_client created.')
+], ids=['with name only realm', 'with name one client'])
+def test_state_present_without_link_should_create_link(monkeypatch, extra_arguments, waited_message):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
@@ -46,12 +51,11 @@ def test_state_present_without_link_should_create_link(monkeypatch):
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'present',
-        'group_name': 'to_link',
-        'role_name': 'one_role',
     }
+    arguments.update(extra_arguments)
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_trace:
         keycloak_link_group_role.main()
     ansible_exit_json = exec_trace.value.args[0]
-    assert ansible_exit_json['msg'] == 'Link between to_link and one_role created.'
-    assert ansible_exit_json['link_group_role'] == [('to_link', 'one_role')]
+    assert ansible_exit_json['msg'] == waited_message
+    assert ansible_exit_json['roles_in_group']['name'] == extra_arguments['role_name']
