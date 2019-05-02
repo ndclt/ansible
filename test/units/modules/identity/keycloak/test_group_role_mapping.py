@@ -45,7 +45,7 @@ def test_state_present_without_link_should_create_link(monkeypatch):
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
-        'state': 'absent',
+        'state': 'present',
         'group_name': 'to_link',
         'role_name': 'one_role',
     }
