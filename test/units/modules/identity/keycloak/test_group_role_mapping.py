@@ -64,3 +64,26 @@ def test_state_present_without_link_should_create_link(monkeypatch, extra_argume
         assert ansible_exit_json['roles_in_group']['name'] == extra_arguments['role_name']
     else:
         assert ansible_exit_json['roles_in_group']['id'] == extra_arguments['role_id']
+
+
+def test_state_present_with_link_should_no_do_something(monkeypatch):
+    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json',
+                        exit_json)
+    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json',
+                        fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'present',
+        'group_name': 'one_group',
+        'role_name': 'already_link_role',
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson) as exec_trace:
+        keycloak_link_group_role.main()
+    ansible_exit_json = exec_trace.value.args[0]
+    assert ansible_exit_json['msg'] == 'Links between one_group and already_link_role exists, doing nothing.'
+    assert ansible_exit_json['roles_in_group']['name'] == 'already_link_role'
