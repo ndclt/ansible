@@ -90,3 +90,29 @@ def test_state_present_with_link_should_no_do_something(monkeypatch, extra_argum
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
     assert ansible_exit_json['roles_in_group']['name'] == extra_arguments['role_name']
+
+
+@pytest.mark.parametrize('extra_arguments, waited_message', [
+    ({'group_name': 'one_group', 'role_name': 'to_unlink'},
+     'Links between one_group and to_unlink deleted.'),
+    ({'group_name': 'one_group', 'role_name': 'to_unlink', 'client_id': 'one_client'},
+     'Links between one_group and to_unlink in one_client deleted.')
+], ids=['role in master', 'role in client'])
+def test_state_absent_with_existing_should_delete_the_link(monkeypatch, extra_arguments, waited_message):
+    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'absent',
+    }
+    arguments.update(extra_arguments)
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson) as exec_trace:
+        keycloak_link_group_role.main()
+    ansible_exit_json = exec_trace.value.args[0]
+    assert ansible_exit_json['msg'] == waited_message
+    assert not ansible_exit_json['roles_in_group']
