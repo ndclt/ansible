@@ -116,3 +116,33 @@ def test_state_absent_with_existing_should_delete_the_link(monkeypatch, extra_ar
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
     assert not ansible_exit_json['roles_in_group']
+
+
+@pytest.mark.parametrize('extra_arguments, waited_message', [
+    ({'group_name': 'doesnotexist', 'role_name': 'one_role'},
+     'group doesnotexist not found.'),
+    ({'group_name': 'one_group', 'role_name': 'doesnotexist'},
+     'role doesnotexist not found.'),
+    ({'group_name': 'one_group', 'role_name': 'one_role', 'client_id': 'doesnotexist'},
+     'client doesnotexist not found.'),
+    ({'group_name': 'one_group', 'role_name': 'doesnotexist', 'client_id': 'one_client'},
+     'role doesnotexist not found in one_client.'),
+], ids=['group name', 'role name', 'client name', 'role name in client'])
+def test_with_wrong_parameters(monkeypatch, extra_arguments, waited_message):
+    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'absent',
+    }
+    arguments.update(extra_arguments)
+    set_module_args(arguments)
+    with pytest.raises(AnsibleFailJson) as exec_trace:
+        keycloak_link_group_role.main()
+    ansible_exit_json = exec_trace.value.args[0]
+    assert ansible_exit_json['msg'] == waited_message
+
