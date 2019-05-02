@@ -46,7 +46,8 @@ def test_state_present_without_link_should_create_link(monkeypatch):
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
-        'group_name': 'one_group',
+        'group_name': 'to_link',
+        'role_name': 'one_role',
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_trace:
