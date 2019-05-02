@@ -108,10 +108,17 @@ def run_module():
                 if role['id'] == role_uuid:
                     result['roles_in_group'] = role
         else:
-            result['msg'] = 'Links between {} and {} exists, doing nothing.'.format(
-                given_group_id,
-                list(given_role_id.values())[0],
-            )
+            if client_id:
+                result['msg'] = 'Links between {} and {} in {} exists, doing nothing.'.format(
+                    given_group_id,
+                    list(given_role_id.values())[0],
+                    client_id,
+                )
+            else:
+                result['msg'] = 'Links between {} and {} exists, doing nothing.'.format(
+                    given_group_id,
+                    list(given_role_id.values())[0],
+                )
             result['roles_in_group'] = existing_role
 
     module.exit_json(**result)
