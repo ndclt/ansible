@@ -39,8 +39,10 @@ def test_state_absent_without_link_should_not_do_something(monkeypatch, extra_ar
 @pytest.mark.parametrize('extra_arguments, waited_message', [
     ({'group_name': 'to_link', 'role_name': 'one_role'}, 'Link between to_link and one_role created.'),
     ({'group_name': 'to_link', 'role_name': 'role_to_link_in_client', 'client_id': 'one_client'},
-     'Link between to_link and role_to_link_in_client in one_client created.')
-], ids=['with name only realm', 'with name one client'])
+     'Link between to_link and role_to_link_in_client in one_client created.'),
+    ({'group_id': 'b180d727-3e8b-476c-95e2-345edd96d853', 'role_id': '7c300837-8221-4196-9e02-1f183bfd1882'},
+     'Link between b180d727-3e8b-476c-95e2-345edd96d853 and 7c300837-8221-4196-9e02-1f183bfd1882 created.')
+], ids=['with name in realm', 'with name one client', 'with uuid for groups and roles'])
 def test_state_present_without_link_should_create_link(monkeypatch, extra_arguments, waited_message):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
@@ -58,4 +60,7 @@ def test_state_present_without_link_should_create_link(monkeypatch, extra_argume
         keycloak_link_group_role.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
-    assert ansible_exit_json['roles_in_group']['name'] == extra_arguments['role_name']
+    if 'role_name' in extra_arguments:
+        assert ansible_exit_json['roles_in_group']['name'] == extra_arguments['role_name']
+    else:
+        assert ansible_exit_json['roles_in_group']['id'] == extra_arguments['role_id']
