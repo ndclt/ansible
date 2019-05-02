@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from itertools import chain
 
 from ansible.module_utils.basic import AnsibleModule
 
