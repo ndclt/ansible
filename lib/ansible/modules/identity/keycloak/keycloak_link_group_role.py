@@ -50,22 +50,24 @@ def run_module():
         given_role_id.pop('name')
     client_id = module.params.get('client_id')
 
-    role_uuid = kc.get_role_id(given_role_id, realm, client_uuid=client_id)
+    role = kc.get_role(given_role_id, realm, client_uuid=client_id)
+    role_uuid = role['id']
 
     group_name = module.params.get('group_name')
     if group_name:
         existing_group = kc.get_group_by_name(group_name, realm)
-        group_id = existing_group['id']
+        group_uuid = existing_group['id']
         given_group_id = group_name
     else:
-        group_id = module.params.get('group_id')
-        given_group_id = group_id
+        group_uuid = module.params.get('group_id')
+        given_group_id = group_uuid
 
     if client_id:
         client_uuid = kc.get_client_id(client_id, realm)
-        existing_role_uuid = [role['id'] for role in kc.get_client_roles_of_group(group_id, client_uuid, realm)]
+        existing_role_uuid = [role['id'] for role in kc.get_client_roles_of_group(group_uuid, client_uuid, realm)]
     else:
-        existing_role_uuid = [role['id'] for role in kc.get_realm_roles_of_group(group_id, realm)]
+        client_uuid = None
+        existing_role_uuid = [role['id'] for role in kc.get_realm_roles_of_group(group_uuid, realm)]
 
     if state == 'absent':
         if role_uuid not in existing_role_uuid:
@@ -86,6 +88,13 @@ def run_module():
                 )
             result['changed'] = False
             result['link_group_role'] = []
+    else:
+        if role_uuid not in existing_role_uuid:
+            kc.create_link_between_group_and_role(group_uuid, role, client_uuid, realm)
+            result['msg'] = to_text(
+                'Link between {} and {} created.'.format(given_group_id, list(given_role_id.values())[0])
+            )
+            result['link_group_role'] = [(given_group_id, list(given_role_id.values())[0])]
     module.exit_json(**result)
 
 
