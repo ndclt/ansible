@@ -54,4 +54,4 @@ def test_state_present_without_link_should_create_link(monkeypatch):
         keycloak_link_group_role.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == 'Link between to_link and one_role created.'
-    assert ansible_exit_json['link_group_role'] == [('one_group', 'one_role')]
+    assert ansible_exit_json['link_group_role'] == [('to_link', 'one_role')]
