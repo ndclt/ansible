@@ -66,8 +66,8 @@ def run_module():
         existing_roles = kc.get_realm_roles_of_group(group_uuid, realm)
     existing_role_uuid = [role['id'] for role in existing_roles]
 
-    role = kc.get_role(given_role_id, realm, client_uuid=client_uuid)
-    role_uuid = role['id']
+    existing_role = kc.get_role(given_role_id, realm, client_uuid=client_uuid)
+    role_uuid = existing_role['id']
 
     if state == 'absent':
         if role_uuid not in existing_role_uuid:
@@ -90,7 +90,7 @@ def run_module():
             result['roles_in_group'] = {}
     else:
         if role_uuid not in existing_role_uuid:
-            kc.create_link_between_group_and_role(group_uuid, role, client_uuid, realm)
+            kc.create_link_between_group_and_role(group_uuid, existing_role, client_uuid, realm)
             if client_uuid:
                 result['msg'] = to_text('Link between {} and {} in {} created.'.format(
                     given_group_id,
@@ -107,6 +107,13 @@ def run_module():
             for role in updated_roles:
                 if role['id'] == role_uuid:
                     result['roles_in_group'] = role
+        else:
+            result['msg'] = 'Links between {} and {} exists, doing nothing.'.format(
+                given_group_id,
+                list(given_role_id.values())[0],
+            )
+            result['roles_in_group'] = existing_role
+
     module.exit_json(**result)
 
 
