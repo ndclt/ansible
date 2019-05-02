@@ -33,6 +33,7 @@ def test_state_absent_without_link_should_not_do_something(monkeypatch, extra_ar
         keycloak_link_group_role.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
+    assert ansible_exit_json['link_group_role'] == []
 
 
 def test_state_present_without_link_should_create_link(monkeypatch):
