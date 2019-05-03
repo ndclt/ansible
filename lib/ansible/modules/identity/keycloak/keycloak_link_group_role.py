@@ -71,7 +71,11 @@ def run_module():
     existing_role_uuid = [role['id'] for role in existing_roles]
 
     existing_role = kc.get_role(given_role_id, realm, client_uuid=client_uuid)
-    role_uuid = existing_role['id']
+    try:
+        role_uuid = existing_role['id']
+    except TypeError:
+        module.fail_json(msg='role {} not found.'.format(
+            list(given_role_id.values())[0]))
 
     if state == 'absent':
         if role_uuid not in existing_role_uuid:
