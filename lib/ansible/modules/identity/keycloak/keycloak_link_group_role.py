@@ -52,11 +52,15 @@ def run_module():
     group_name = module.params.get('group_name')
     if group_name:
         existing_group = kc.get_group_by_name(group_name, realm)
-        group_uuid = existing_group['id']
         given_group_id = group_name
     else:
         group_uuid = module.params.get('group_id')
+        existing_group = kc.get_group_by_groupid(group_uuid, realm)
         given_group_id = group_uuid
+    try:
+        group_uuid = existing_group['id']
+    except TypeError:
+        module.fail_json(msg='group {} not found.'.format(given_group_id))
 
     if client_id:
         client_uuid = kc.get_client_id(client_id, realm)
