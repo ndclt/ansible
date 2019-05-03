@@ -2,10 +2,89 @@
 from __future__ import (absolute_import, division, print_function)
 
 import pytest
+from itertools import count
+import json
 
+from ansible.module_utils.six import StringIO
 from units.modules.utils import (
     AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args)
 from ansible.modules.identity.keycloak import keycloak_link_group_role
+from ansible.module_utils.six.moves.urllib.error import HTTPError
+
+
+def create_wrapper(text_as_string):
+    """Allow to mock many times a call to one address.
+    Without this function, the StringIO is empty for the second call.
+    """
+    def _create_wrapper():
+        return StringIO(text_as_string)
+    return _create_wrapper
+
+
+def build_mocked_request(get_id_user_count, response_dict):
+    def _mocked_requests(*args, **kwargs):
+        try:
+            url = args[0]
+        except IndexError:
+            url = kwargs['url']
+        method = kwargs['method']
+        future_response = response_dict.get(url, None)
+        return get_response(future_response, method, get_id_user_count)
+    return _mocked_requests
+
+
+def get_response(object_with_future_response, method, get_id_call_count):
+    if callable(object_with_future_response):
+        return object_with_future_response()
+    if isinstance(object_with_future_response, dict):
+        return get_response(
+            object_with_future_response[method], method, get_id_call_count)
+    if isinstance(object_with_future_response, list):
+        try:
+            call_number = get_id_call_count.__next__()
+        except AttributeError:
+            # manage python 2 versions.
+            call_number = get_id_call_count.next()
+        return get_response(
+            object_with_future_response[call_number], method, get_id_call_count)
+    return object_with_future_response
+
+
+def raise_404(url):
+    def _raise_404():
+        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
+    return _raise_404
+
+
+CONNECTION_DICT = {
+    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token"}'),
+}
+
+
+@pytest.fixture
+def mock_doing_nothing_urls(mocker):
+    doing_nothing_urls = CONNECTION_DICT.copy()
+    doing_nothing_urls.update({
+        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
+            json.dumps([{'id': '111-111', 'name': 'one_group'}])),
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111': create_wrapper(
+            json.dumps({'id': '111-111', 'name': 'one_group'})),
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/composite': create_wrapper(
+            json.dumps({})),
+        'http://keycloak.url/auth/admin/realms/master/roles/one_role': create_wrapper(
+            json.dumps({'id': '222-222', 'name': 'one_role'})),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
+            json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
+        'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/role_in_client': create_wrapper(
+            json.dumps({'id': '444-444', 'name': 'role_in_client'})),
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/clients/333-333/composite': create_wrapper(
+            json.dumps([])),
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), doing_nothing_urls),
+        autospec=True
+    )
 
 
 @pytest.mark.parametrize('extra_arguments, waited_message', [
@@ -14,7 +93,8 @@ from ansible.modules.identity.keycloak import keycloak_link_group_role
     ({'role_name': 'role_in_client', 'client_id': 'one_client'},
      'Links between one_group and role_in_client in one_client does_not_exist, doing nothing.')
 ], ids=['role in realm master', 'role in client'])
-def test_state_absent_without_link_should_not_do_something(monkeypatch, extra_arguments, waited_message):
+def test_state_absent_without_link_should_not_do_something(
+        monkeypatch, extra_arguments, waited_message, mock_doing_nothing_urls):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
