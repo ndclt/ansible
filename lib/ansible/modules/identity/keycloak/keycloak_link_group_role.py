@@ -64,6 +64,8 @@ def run_module():
 
     if client_id:
         client_uuid = kc.get_client_id(client_id, realm)
+        if not client_uuid:
+            module.fail_json(msg='client {} not found.'.format(client_id))
         existing_roles = kc.get_client_roles_of_group(group_uuid, client_uuid, realm)
     else:
         client_uuid = None
