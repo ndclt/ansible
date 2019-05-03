@@ -76,6 +76,9 @@ def run_module():
     try:
         role_uuid = existing_role['id']
     except TypeError:
+        if client_id:
+            module.fail_json(msg='role {} not found in {}.'.format(
+                list(given_role_id.values())[0], client_id))
         module.fail_json(msg='role {} not found.'.format(
             list(given_role_id.values())[0]))
 
