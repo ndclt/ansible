@@ -113,9 +113,8 @@ def run_module():
                     group_id=given_group_id,
                     role_id=list(given_role_id.values())[0],
                 )
+            result['changed'] = True
         result['roles_in_group'] = {}
-
-
     else:
         if role_uuid not in existing_role_uuid:
             kc.create_link_between_group_and_role(group_uuid, existing_role, client_uuid, realm)
@@ -132,6 +131,7 @@ def run_module():
                     list(given_role_id.values())[0],
                 ))
                 updated_roles = kc.get_realm_roles_of_group(group_uuid, realm)
+            result['changed'] = True
             for role in updated_roles:
                 if role['id'] == role_uuid:
                     result['roles_in_group'] = role
@@ -147,6 +147,7 @@ def run_module():
                     given_group_id,
                     list(given_role_id.values())[0],
                 )
+            result['changed'] = False
             result['roles_in_group'] = existing_role
 
     module.exit_json(**result)
