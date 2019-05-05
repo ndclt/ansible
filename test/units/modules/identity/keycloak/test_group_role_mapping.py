@@ -117,6 +117,29 @@ def test_state_absent_without_link_should_not_do_something(
     assert ansible_exit_json['roles_in_group'] == {}
 
 
+@pytest.fixture
+def mock_creation_url(mocker):
+    doing_nothing_urls = CONNECTION_DICT.copy()
+    doing_nothing_urls.update({
+        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
+            json.dumps([{'id': '555-555', 'name': 'to_link'}])),
+        'http://keycloak.url/auth/admin/realms/master/groups/555-555': create_wrapper(
+            json.dumps({'id': '555-555', 'name': 'to_link'})),
+        'http://keycloak.url/auth/admin/realms/master/groups/555-555/role-mappings/realm/composite': [
+            create_wrapper(json.dumps({})),
+            create_wrapper(json.dumps([{'id': '222-222', 'name': 'one_role'}]))
+        ],
+        'http://keycloak.url/auth/admin/realms/master/roles/one_role': create_wrapper(
+            json.dumps({'id': '222-222', 'name': 'one_role'})),
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/': None,
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), doing_nothing_urls),
+        autospec=True
+    )
+
+
 @pytest.mark.parametrize('extra_arguments, waited_message', [
     ({'group_name': 'to_link', 'role_name': 'one_role'}, 'Link between to_link and one_role created.'),
     ({'group_name': 'to_link', 'role_name': 'role_to_link_in_client', 'client_id': 'one_client'},
@@ -124,7 +147,9 @@ def test_state_absent_without_link_should_not_do_something(
     ({'group_id': 'b180d727-3e8b-476c-95e2-345edd96d853', 'role_id': '7c300837-8221-4196-9e02-1f183bfd1882'},
      'Link between b180d727-3e8b-476c-95e2-345edd96d853 and 7c300837-8221-4196-9e02-1f183bfd1882 created.')
 ], ids=['with name in realm', 'with name one client', 'with uuid for groups and roles'])
-def test_state_present_without_link_should_create_link(monkeypatch, extra_arguments, waited_message):
+def test_state_present_without_link_should_create_link(
+        monkeypatch, extra_arguments, waited_message, mock_creation_url, request):
+    print(request.node.name)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
@@ -221,9 +246,9 @@ def test_with_wrong_parameters(monkeypatch, extra_arguments, waited_message):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        'auth_keycloak_url': 'http://keycloak.url/auth',
-        'auth_username': 'test_admin',
-        'auth_password': 'admin_password',
+        'auth_keycloak_url': 'http://localhost:8080/auth',
+        'auth_username': 'nd',
+        'auth_password': 'nd',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
