@@ -140,7 +140,9 @@ def mock_creation_url(mocker):
         ],
         'http://keycloak.url/auth/admin/realms/master/clients/777-777/roles/role_to_link_in_client': create_wrapper(
             json.dumps({'id': 'b4af56e4-869a-44de-97b5-10c7d1bb9664', 'name': 'role_to_link_in_client'})
-        )
+        ),
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/222-222': create_wrapper(
+            json.dumps({'id': '222-222', 'name': 'one_role'})),
     })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
@@ -153,12 +155,11 @@ def mock_creation_url(mocker):
     ({'group_name': 'to_link', 'role_name': 'one_role'}, 'Link between to_link and one_role created.'),
     ({'group_name': 'to_link', 'role_name': 'role_to_link_in_client', 'client_id': 'one_client'},
      'Link between to_link and role_to_link_in_client in one_client created.'),
-    ({'group_id': 'b180d727-3e8b-476c-95e2-345edd96d853', 'role_id': '7c300837-8221-4196-9e02-1f183bfd1882'},
-     'Link between b180d727-3e8b-476c-95e2-345edd96d853 and 7c300837-8221-4196-9e02-1f183bfd1882 created.')
+    ({'group_id': '555-555', 'role_id': '222-222'},
+     'Link between 555-555 and 222-222 created.')
 ], ids=['with name in realm', 'with name one client', 'with uuid for groups and roles'])
 def test_state_present_without_link_should_create_link(
-        monkeypatch, extra_arguments, waited_message, mock_creation_url, request):
-    print(request.node.name)
+        monkeypatch, extra_arguments, waited_message, mock_creation_url):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
