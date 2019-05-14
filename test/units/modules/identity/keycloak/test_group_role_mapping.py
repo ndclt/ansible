@@ -119,8 +119,8 @@ def test_state_absent_without_link_should_not_do_something(
 
 @pytest.fixture
 def mock_creation_url(mocker):
-    doing_nothing_urls = CONNECTION_DICT.copy()
-    doing_nothing_urls.update({
+    creation_urls = CONNECTION_DICT.copy()
+    creation_urls.update({
         'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
             json.dumps([{'id': '555-555', 'name': 'to_link'}])),
         'http://keycloak.url/auth/admin/realms/master/groups/555-555': create_wrapper(
@@ -132,10 +132,19 @@ def mock_creation_url(mocker):
         'http://keycloak.url/auth/admin/realms/master/roles/one_role': create_wrapper(
             json.dumps({'id': '222-222', 'name': 'one_role'})),
         'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/': None,
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client':
+            create_wrapper(json.dumps([{'id': '777-777', 'clientId': 'one_client'}])),
+        'http://keycloak.url/auth/admin/realms/master/groups/555-555/role-mappings/clients/777-777/composite': [
+            create_wrapper(json.dumps(({}))),
+            create_wrapper(json.dumps([{'id': 'b4af56e4-869a-44de-97b5-10c7d1bb9664', 'name': 'role_to_link_in_client'}]))
+        ],
+        'http://keycloak.url/auth/admin/realms/master/clients/777-777/roles/role_to_link_in_client': create_wrapper(
+            json.dumps({'id': 'b4af56e4-869a-44de-97b5-10c7d1bb9664', 'name': 'role_to_link_in_client'})
+        )
     })
     return mocker.patch(
         'ansible.module_utils.keycloak.open_url',
-        side_effect=build_mocked_request(count(), doing_nothing_urls),
+        side_effect=build_mocked_request(count(), creation_urls),
         autospec=True
     )
 
