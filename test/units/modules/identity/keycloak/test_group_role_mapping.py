@@ -246,13 +246,50 @@ def test_state_present_with_link_should_no_do_something(
     assert ansible_exit_json['roles_in_group']['name'] == extra_arguments['role_name']
 
 
+@pytest.fixture()
+def to_delete(mocker):
+    delete_urls = CONNECTION_DICT.copy()
+    delete_urls.update({
+        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
+            json.dumps([{'id': '123-123', 'name': 'one_group'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123': create_wrapper(
+            json.dumps({'id': '123-123', 'name': 'one_group'})
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/composite': create_wrapper(
+            json.dumps([{'id': '987-987', 'name': 'to_unlink'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/roles/to_unlink': create_wrapper(
+            json.dumps({'id': '987-987', 'name': 'to_unlink', })
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/': create_wrapper(
+            json.dumps({})
+        ),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
+            json.dumps([{'id': '333-333', 'clientId': 'one_client'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/clients/333-333/composite': create_wrapper(
+            json.dumps([{'id': '765', '765': 'to_unlink'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/to_unlink': create_wrapper(
+            json.dumps({'id': '765', '765': 'to_unlink'})
+        )
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), delete_urls),
+        autospec=True
+    )
+
+
 @pytest.mark.parametrize('extra_arguments, waited_message', [
     ({'group_name': 'one_group', 'role_name': 'to_unlink'},
      'Links between one_group and to_unlink deleted.'),
     ({'group_name': 'one_group', 'role_name': 'to_unlink', 'client_id': 'one_client'},
      'Links between one_group and to_unlink in one_client deleted.')
 ], ids=['role in master', 'role in client'])
-def test_state_absent_with_existing_should_delete_the_link(monkeypatch, extra_arguments, waited_message):
+def test_state_absent_with_existing_should_delete_the_link(
+        monkeypatch, extra_arguments, waited_message, to_delete):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
