@@ -133,12 +133,12 @@ def mock_creation_url(mocker):
             json.dumps({'id': '222-222', 'name': 'one_role'})),
         'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/': None,
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client':
-            create_wrapper(json.dumps([{'id': '777-777', 'clientId': 'one_client'}])),
-        'http://keycloak.url/auth/admin/realms/master/groups/555-555/role-mappings/clients/777-777/composite': [
+            create_wrapper(json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
+        'http://keycloak.url/auth/admin/realms/master/groups/555-555/role-mappings/clients/333-333/composite': [
             create_wrapper(json.dumps(({}))),
             create_wrapper(json.dumps([{'id': 'b4af56e4-869a-44de-97b5-10c7d1bb9664', 'name': 'role_to_link_in_client'}]))
         ],
-        'http://keycloak.url/auth/admin/realms/master/clients/777-777/roles/role_to_link_in_client': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/role_to_link_in_client': create_wrapper(
             json.dumps({'id': 'b4af56e4-869a-44de-97b5-10c7d1bb9664', 'name': 'role_to_link_in_client'})
         ),
         'http://keycloak.url/auth/admin/realms/master/roles-by-id/222-222': create_wrapper(
@@ -183,13 +183,49 @@ def test_state_present_without_link_should_create_link(
         assert ansible_exit_json['roles_in_group']['id'] == extra_arguments['role_id']
 
 
+@pytest.fixture()
+def existing_nothing_to_do(mocker):
+    nothing_to_do_url = CONNECTION_DICT.copy()
+    nothing_to_do_url.update({
+        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
+            json.dumps([{'id': '123-123', 'name': 'one_group'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123': create_wrapper(
+            json.dumps({'id': '123-123', 'name': 'one_group'})
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/composite': create_wrapper(
+            json.dumps([{'id': '456-456', 'name': 'already_link_role'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/roles/already_link_role': create_wrapper(
+            json.dumps({'id': '456-456', 'name': 'already_link_role'})
+        ),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
+            json.dumps([{'id': '333-333', 'clientId': 'one_client'}, ])),
+        'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/role_in_client': create_wrapper(
+            json.dumps({'id': '789-789', 'name': 'already_link_role'})),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/clients/333-333/composite': create_wrapper(
+            json.dumps([{'id': '789-789', 'name': 'already_link_role', }, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/already_link_role': create_wrapper(
+            json.dumps({'id': '789-789', 'name': 'already_link_role', })
+        ),
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), nothing_to_do_url),
+        autospec=True
+    )
+
+
 @pytest.mark.parametrize('extra_arguments, waited_message', [
     ({'group_name': 'one_group', 'role_name': 'already_link_role'},
      'Links between one_group and already_link_role exists, doing nothing.'),
     ({'group_name': 'one_group', 'role_name': 'already_link_role', 'client_id': 'one_client'},
      'Links between one_group and already_link_role in one_client exists, doing nothing.')
 ], ids=['role in master', 'role in client'])
-def test_state_present_with_link_should_no_do_something(monkeypatch, extra_arguments, waited_message):
+def test_state_present_with_link_should_no_do_something(
+    monkeypatch, extra_arguments, waited_message, existing_nothing_to_do
+):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
