@@ -41,13 +41,13 @@ options:
         type: str
         choices: [present, absent]
         default: present
-        
+
     realm:
         description:
             - The realm to create the client in.
         type: str
         default: master
-        
+
     attributes:
         description:
             – a dictionary with the key and the value to put in keycloak.
@@ -55,30 +55,30 @@ options:
             Keys and values are converted into string.
         type: dict
         required: false
-    
+
     name:
         description:
             - the name of the role to modify.
             - I(name) and I(id) are mutually exclusive.
         type: str
-    
+
     id:
         description:
             - the id (generally an uuid) of the role to modify.
             - I(name) and I(id) are mutually exclusive.
             - I(id) and I(client_id) are mutually exclusive.
         type: str
-    
+
     client_id:
         description:
-            - client id of client where the role will be inserted. This is usually 
+            - client id of client where the role will be inserted. This is usually
               an alphanumeric name chosen by you.
             - the client must exist before this call.
             - I(id) and I(client_id) are mutually exclusive.
         type: str
         aliases: [ clientId ]
         required: false
-    
+
     description:
         description:
             - The description associate to your role.
@@ -89,7 +89,6 @@ extends_documentation_fragment:
     - keycloak
 author:
     - Nicolas Duclert (@ndclt) <nicolas.duclert@metronlab.com>
-    
 '''
 
 EXAMPLES = r'''
@@ -113,7 +112,7 @@ EXAMPLES = r'''
     realm: master
     client_id: client-with-role
     name: role-test-in-client-1
-    
+
 - name: create or update keycloak role in realm (with everything)
   keycloak_role:
     auth_client_id: admin-cli
@@ -134,7 +133,7 @@ msg:
   returned: always
   type: str
   sample: "Role role-test has been updated"
-  
+
 proposed:
     description: role representation of proposed changes to role
     returned: always
