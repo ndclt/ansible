@@ -12,6 +12,12 @@ from ansible.modules.identity.keycloak import keycloak_link_group_role
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 
+def raise_404(url):
+    def _raise_404():
+        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
+    return _raise_404
+
+
 def create_wrapper(text_as_string):
     """Allow to mock many times a call to one address.
     Without this function, the StringIO is empty for the second call.
@@ -290,12 +296,6 @@ def test_state_absent_with_existing_should_delete_the_link(
     assert ansible_exit_json['changed']
     assert ansible_exit_json['msg'] == waited_message
     assert not ansible_exit_json['roles_in_group']
-
-
-def raise_404(url):
-    def _raise_404():
-        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
-    return _raise_404
 
 
 @pytest.fixture
