@@ -14,7 +14,7 @@ ANSIBLE_METADATA = {
 
 DOCUMENTATION = r'''
 ---
-module keycloak_group_role_mapping
+module: keycloak_group_role_mapping
 
 short_description: Allows administration of Keycloak mapping between group and role via Keycloak API
 
@@ -26,12 +26,10 @@ description:
       used must have the requisite access rights. In a default Keycloak installation, admin-cli
       and an admin user would work, as would a separate client definition with the scope tailored
       to your needs and a user having the expected roles.
-
     - The names of module options are snake_cased versions of the camelCase ones found in the
       Keycloak API and its documentation at U(https://www.keycloak.org/docs-api/4.8/rest-api/index.html/).
       Aliases are provided so camelCased versions can be used as well. If they are in conflict
       with ansible names or previous used names, they will be prefixed by "keycloak".
-
     - The group, role and client should exist before the call to this module. If not,
       a error message will be return.
 
@@ -55,7 +53,7 @@ options:
         description:
             - Name of the group
             - This parameter is mutually exclusive with group_id and one of
-            them is required by the module.
+              them is required by the module.
         aliases: [ groupName ]
         type: str
 
@@ -63,7 +61,7 @@ options:
         description:
             - Id (as a uuid) of the group
             - This parameter is mutually exclusive with group_name and one of
-            them is required by the module.
+              them is required by the module.
         aliases: [ groupId ]
         type: str
 
@@ -71,7 +69,7 @@ options:
         description:
             - Name of the role
             - This parameter is mutually exclusive with role_id and one of
-            them is required by the module.
+              them is required by the module.
         aliases: [ roleName ]
         type: str
 
@@ -79,14 +77,14 @@ options:
         description:
             - Id (as a uuid) of the role
             - This parameter is mutually exclusive with role_name and one of
-            them is required by the module.
+              them is required by the module.
         aliases: [ roleId ]
         type: str
 
     client_id:
         description:
             - Client id of client where the given role will be search. This is
-            usually an alphanumeric name chosen by you.
+              usually an alphanumeric name chosen by you.
         type: str
         aliases: [ clientId ]
 
