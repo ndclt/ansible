@@ -146,7 +146,7 @@ def test_mutually_exclusive_arguments_should_raise_an_error(monkeypatch, mutual_
 
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'parameters are mutually exclusive: %s' % (
-        to_text(', '.join(mutual_exclusive.keys())))
+        to_text('|'.join(mutual_exclusive.keys())))
 
 
 @pytest.mark.parametrize('role_identifier,error_message', [
