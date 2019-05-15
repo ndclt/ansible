@@ -24,7 +24,7 @@ def create_wrapper(text_as_string):
 
 
 CONNECTION_DICT = {
-    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token"}'),}
+    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token"}'), }
 
 DEFAULT_ROLES = [
     {'id': 'c02533c5-d943-4274-9953-8b6a930ee74e', 'name': 'admin',
@@ -196,7 +196,8 @@ def mock_delete_role_urls(mocker):
     delete_role_urls.update({
         'http://keycloak.url/auth/admin/realms/master/roles/to%20delete': create_wrapper(json.dumps(to_delete_role_in_master)),
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
-        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/to%20delete': create_wrapper(json.dumps(to_delete_role_in_client)),
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/to%20delete': create_wrapper(
+            json.dumps(to_delete_role_in_client)),
         'http://keycloak.url/auth/admin/realms/master/roles-by-id/cccccccc-d943-4274-9953-8b6a930ee74e': None,
         'http://keycloak.url/auth/admin/realms/master/roles-by-id/bbbbbbbb-acca-463b-bd93-2e7fd66022f6': {
             'DELETE': None,
@@ -275,7 +276,7 @@ def mock_create_role_urls(mocker):
                 create_wrapper(json.dumps(update_created_role(into_client=True)))
             ]
         },
-        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles':{
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles': {
             'POST': CreatedUserMockResponse('role1', '11111111-1111-1111-1111-111111111111')
         },
         'http://keycloak.url/auth/admin/realms/master/roles/role1': {
@@ -327,7 +328,7 @@ def mock_update_role_urls(mocker):
     update_role_urls = CONNECTION_DICT.copy()
     update_role_urls.update({
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
-        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/role1':{
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/role1': {
             'GET': [
                 create_wrapper(json.dumps(update_created_role(into_client=True))),
                 create_wrapper(json.dumps(update_created_role(
@@ -343,7 +344,7 @@ def mock_update_role_urls(mocker):
             ],
             'PUT': None
         },
-        'http://keycloak.url/auth/admin/realms/master/roles-by-id/ffffffff-1111-1111-1111-111111111111':{
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/ffffffff-1111-1111-1111-111111111111': {
             'GET': [
                 create_wrapper(json.dumps(update_created_role(into_client=False))),
                 create_wrapper(json.dumps(update_created_role(
