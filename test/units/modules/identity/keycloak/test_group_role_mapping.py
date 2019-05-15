@@ -57,7 +57,14 @@ def raise_404(url):
 
 
 CONNECTION_DICT = {
-    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper('{"access_token": "a long token"}'),
+    'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper(
+        '{"access_token": "a long token"}'),
+    'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
+        json.dumps([{'id': '111-111', 'name': 'one_group'}])),
+    'http://keycloak.url/auth/admin/realms/master/groups/111-111': create_wrapper(
+            json.dumps({'id': '111-111', 'name': 'one_group'})),
+    'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
+            json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
 }
 
 
@@ -65,16 +72,10 @@ CONNECTION_DICT = {
 def mock_doing_nothing_urls(mocker):
     doing_nothing_urls = CONNECTION_DICT.copy()
     doing_nothing_urls.update({
-        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
-            json.dumps([{'id': '111-111', 'name': 'one_group'}])),
-        'http://keycloak.url/auth/admin/realms/master/groups/111-111': create_wrapper(
-            json.dumps({'id': '111-111', 'name': 'one_group'})),
         'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/composite': create_wrapper(
             json.dumps({})),
         'http://keycloak.url/auth/admin/realms/master/roles/one_role': create_wrapper(
             json.dumps({'id': '222-222', 'name': 'one_role'})),
-        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
-            json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
         'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/role_in_client': create_wrapper(
             json.dumps({'id': '444-444', 'name': 'role_in_client'})),
         'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/clients/333-333/composite': create_wrapper(
@@ -132,8 +133,6 @@ def mock_creation_url(mocker):
         'http://keycloak.url/auth/admin/realms/master/roles/one_role': create_wrapper(
             json.dumps({'id': '222-222', 'name': 'one_role'})),
         'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/': None,
-        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client':
-            create_wrapper(json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
         'http://keycloak.url/auth/admin/realms/master/groups/555-555/role-mappings/clients/333-333/composite': [
             create_wrapper(json.dumps(({}))),
             create_wrapper(json.dumps([{'id': 'b4af56e4-869a-44de-97b5-10c7d1bb9664', 'name': 'role_to_link_in_client'}]))
@@ -187,23 +186,15 @@ def test_state_present_without_link_should_create_link(
 def existing_nothing_to_do(mocker):
     nothing_to_do_url = CONNECTION_DICT.copy()
     nothing_to_do_url.update({
-        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
-            json.dumps([{'id': '123-123', 'name': 'one_group'}, ])
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123': create_wrapper(
-            json.dumps({'id': '123-123', 'name': 'one_group'})
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/composite': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/composite': create_wrapper(
             json.dumps([{'id': '456-456', 'name': 'already_link_role'}, ])
         ),
         'http://keycloak.url/auth/admin/realms/master/roles/already_link_role': create_wrapper(
             json.dumps({'id': '456-456', 'name': 'already_link_role'})
         ),
-        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
-            json.dumps([{'id': '333-333', 'clientId': 'one_client'}, ])),
         'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/role_in_client': create_wrapper(
             json.dumps({'id': '789-789', 'name': 'already_link_role'})),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/clients/333-333/composite': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/clients/333-333/composite': create_wrapper(
             json.dumps([{'id': '789-789', 'name': 'already_link_role', }, ])
         ),
         'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/already_link_role': create_wrapper(
@@ -250,25 +241,16 @@ def test_state_present_with_link_should_no_do_something(
 def to_delete(mocker):
     delete_urls = CONNECTION_DICT.copy()
     delete_urls.update({
-        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
-            json.dumps([{'id': '123-123', 'name': 'one_group'}, ])
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123': create_wrapper(
-            json.dumps({'id': '123-123', 'name': 'one_group'})
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/composite': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/composite': create_wrapper(
             json.dumps([{'id': '987-987', 'name': 'to_unlink'}, ])
         ),
         'http://keycloak.url/auth/admin/realms/master/roles/to_unlink': create_wrapper(
             json.dumps({'id': '987-987', 'name': 'to_unlink', })
         ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/': create_wrapper(
             json.dumps({})
         ),
-        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
-            json.dumps([{'id': '333-333', 'clientId': 'one_client'}, ])
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/clients/333-333/composite': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/clients/333-333/composite': create_wrapper(
             json.dumps([{'id': '765', '765': 'to_unlink'}, ])
         ),
         'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/to_unlink': create_wrapper(
@@ -320,14 +302,8 @@ def raise_404(url):
 def wrong_parameter_url(mocker):
     wrong_parameter_urls = CONNECTION_DICT.copy()
     wrong_parameter_urls.update({
-        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
-            json.dumps([{'id': '123-123', 'name': 'one_group'}, ])
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123': create_wrapper(
-            json.dumps({'id': '123-123', 'name': 'one_group'})
-        ),
         'http://keycloak.url/auth/admin/realms/master/groups/000-000': raise_404('groups/000-000'),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/composite': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/realm/composite': create_wrapper(
             json.dumps([])
         ),
         'http://keycloak.url/auth/admin/realms/master/roles/doesnotexist': raise_404('roles/doesnotexist'),
@@ -335,10 +311,7 @@ def wrong_parameter_url(mocker):
         'http://keycloak.url/auth/admin/realms/master/clients?clientId=doesnotexist': create_wrapper(
             json.dumps([])
         ),
-        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
-            json.dumps([{'id': '333-333', 'clientId': 'one_client'}, ])
-        ),
-        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/clients/333-333/composite': create_wrapper(
+        'http://keycloak.url/auth/admin/realms/master/groups/111-111/role-mappings/clients/333-333/composite': create_wrapper(
             json.dumps([])
         ),
         'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/doesnotexist': raise_404('333-333/roles/doesnotexist'),
