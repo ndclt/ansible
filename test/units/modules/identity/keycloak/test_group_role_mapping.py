@@ -310,6 +310,46 @@ def test_state_absent_with_existing_should_delete_the_link(
     assert not ansible_exit_json['roles_in_group']
 
 
+def raise_404(url):
+    def _raise_404():
+        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
+    return _raise_404
+
+
+@pytest.fixture
+def wrong_parameter_url(mocker):
+    wrong_parameter_urls = CONNECTION_DICT.copy()
+    wrong_parameter_urls.update({
+        'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
+            json.dumps([{'id': '123-123', 'name': 'one_group'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123': create_wrapper(
+            json.dumps({'id': '123-123', 'name': 'one_group'})
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/000-000': raise_404('groups/000-000'),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/realm/composite': create_wrapper(
+            json.dumps([])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/roles/doesnotexist': raise_404('roles/doesnotexist'),
+        'http://keycloak.url/auth/admin/realms/master/roles-by-id/000-000': raise_404('roles-by-id/000-000'),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=doesnotexist': create_wrapper(
+            json.dumps([])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
+            json.dumps([{'id': '333-333', 'clientId': 'one_client'}, ])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/groups/123-123/role-mappings/clients/333-333/composite': create_wrapper(
+            json.dumps([])
+        ),
+        'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/doesnotexist': raise_404('333-333/roles/doesnotexist'),
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), wrong_parameter_urls),
+        autospec=True
+    )
+
+
 @pytest.mark.parametrize('extra_arguments, waited_message', [
     ({'group_name': 'doesnotexist', 'role_name': 'one_role'},
      'group doesnotexist not found.'),
@@ -325,13 +365,13 @@ def test_state_absent_with_existing_should_delete_the_link(
      'role doesnotexist not found in one_client.'),
 ], ids=['group name', 'group id', 'role name', 'role id', 'client name',
         'role name in client'])
-def test_with_wrong_parameters(monkeypatch, extra_arguments, waited_message):
+def test_with_wrong_parameters(monkeypatch, extra_arguments, waited_message, wrong_parameter_url):
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
     arguments = {
-        'auth_keycloak_url': 'http://localhost:8080/auth',
-        'auth_username': 'nd',
-        'auth_password': 'nd',
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
         'state': 'absent',
