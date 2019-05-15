@@ -8,7 +8,7 @@ import json
 from ansible.module_utils.six import StringIO
 from units.modules.utils import (
     AnsibleExitJson, AnsibleFailJson, fail_json, exit_json, set_module_args)
-from ansible.modules.identity.keycloak import keycloak_link_group_role
+from ansible.modules.identity.keycloak import keycloak_group_role_mapping
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 
@@ -102,8 +102,8 @@ def mock_doing_nothing_urls(mocker):
 ], ids=['role in realm master', 'role in client'])
 def test_state_absent_without_link_should_not_do_something(
         monkeypatch, extra_arguments, waited_message, mock_doing_nothing_urls):
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -117,7 +117,7 @@ def test_state_absent_without_link_should_not_do_something(
 
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_trace:
-        keycloak_link_group_role.main()
+        keycloak_group_role_mapping.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert not ansible_exit_json['changed']
     assert ansible_exit_json['msg'] == waited_message
@@ -165,8 +165,8 @@ def mock_creation_url(mocker):
 ], ids=['with name in realm', 'with name one client', 'with uuid for groups and roles'])
 def test_state_present_without_link_should_create_link(
         monkeypatch, extra_arguments, waited_message, mock_creation_url):
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -178,7 +178,7 @@ def test_state_present_without_link_should_create_link(
     arguments.update(extra_arguments)
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_trace:
-        keycloak_link_group_role.main()
+        keycloak_group_role_mapping.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
     assert ansible_exit_json['changed']
@@ -223,8 +223,8 @@ def existing_nothing_to_do(mocker):
 def test_state_present_with_link_should_no_do_something(
     monkeypatch, extra_arguments, waited_message, existing_nothing_to_do
 ):
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -236,7 +236,7 @@ def test_state_present_with_link_should_no_do_something(
     arguments.update(extra_arguments)
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_trace:
-        keycloak_link_group_role.main()
+        keycloak_group_role_mapping.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert not ansible_exit_json['changed']
     assert ansible_exit_json['msg'] == waited_message
@@ -278,8 +278,8 @@ def to_delete(mocker):
 ], ids=['role in master', 'role in client'])
 def test_state_absent_with_existing_should_delete_the_link(
         monkeypatch, extra_arguments, waited_message, to_delete):
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -291,7 +291,7 @@ def test_state_absent_with_existing_should_delete_the_link(
     arguments.update(extra_arguments)
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as exec_trace:
-        keycloak_link_group_role.main()
+        keycloak_group_role_mapping.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['changed']
     assert ansible_exit_json['msg'] == waited_message
@@ -339,8 +339,8 @@ def wrong_parameter_url(mocker):
 ], ids=['group name', 'group id', 'role name', 'role id', 'client name',
         'role name in client'])
 def test_with_wrong_parameters(monkeypatch, extra_arguments, waited_message, wrong_parameter_url):
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_link_group_role.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_group_role_mapping.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -352,6 +352,6 @@ def test_with_wrong_parameters(monkeypatch, extra_arguments, waited_message, wro
     arguments.update(extra_arguments)
     set_module_args(arguments)
     with pytest.raises(AnsibleFailJson) as exec_trace:
-        keycloak_link_group_role.main()
+        keycloak_group_role_mapping.main()
     ansible_exit_json = exec_trace.value.args[0]
     assert ansible_exit_json['msg'] == waited_message
