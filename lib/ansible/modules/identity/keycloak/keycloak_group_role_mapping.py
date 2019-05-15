@@ -16,7 +16,7 @@ DOCUMENTATION = r'''
 ---
 module keycloak_group_role_mapping
 
-short_description: Allows adminstration of Keycloak mapping between group and role via Keycloak API
+short_description: Allows administration of Keycloak mapping between group and role via Keycloak API
 
 version_added: "2.9"
 
@@ -31,7 +31,7 @@ description:
       Keycloak API and its documentation at U(https://www.keycloak.org/docs-api/4.8/rest-api/index.html/).
       Aliases are provided so camelCased versions can be used as well. If they are in conflict
       with ansible names or previous used names, they will be prefixed by "keycloak".
-    
+
     - The group, role and client should exist before the call to this module. If not,
       a error message will be return.
 
@@ -50,35 +50,35 @@ options:
             - The realm where the role, group and optionaly client are.
         type: str
         default: master
-    
+
     group_name:
         description:
             - Name of the group
-            - This parameter is mutually exclusive with group_id and one of 
+            - This parameter is mutually exclusive with group_id and one of
             them is required by the module.
         aliases: [ groupName ]
         type: str
-    
+
     group_id:
         description:
             - Id (as a uuid) of the group
-            - This parameter is mutually exclusive with group_name and one of 
+            - This parameter is mutually exclusive with group_name and one of
             them is required by the module.
         aliases: [ groupId ]
         type: str
-    
+
     role_name:
         description:
             - Name of the role
-            - This parameter is mutually exclusive with role_id and one of 
+            - This parameter is mutually exclusive with role_id and one of
             them is required by the module.
         aliases: [ roleName ]
         type: str
-    
+
     role_id:
         description:
             - Id (as a uuid) of the role
-            - This parameter is mutually exclusive with role_name and one of 
+            - This parameter is mutually exclusive with role_name and one of
             them is required by the module.
         aliases: [ roleId ]
         type: str
@@ -127,7 +127,7 @@ msg:
   returned: always
   type: str
   sample: "Link between one_group and one_role created."
-  
+
 changed:
   description: whether the state of the keycloak configuration change
   returned: always
@@ -234,7 +234,7 @@ def run_module():
                         group_id=given_group_id,
                         role_id=list(given_role_id.values())[0],
                         client_id=client_id
-                ))
+                    ))
             else:
                 result['msg'] = to_text(
                     'Links between {group_id} and {role_id} does not exist, doing nothing.'.format(

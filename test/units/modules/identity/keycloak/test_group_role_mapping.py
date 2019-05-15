@@ -68,9 +68,9 @@ CONNECTION_DICT = {
     'http://keycloak.url/auth/admin/realms/master/groups': create_wrapper(
         json.dumps([{'id': '111-111', 'name': 'one_group'}])),
     'http://keycloak.url/auth/admin/realms/master/groups/111-111': create_wrapper(
-            json.dumps({'id': '111-111', 'name': 'one_group'})),
+        json.dumps({'id': '111-111', 'name': 'one_group'})),
     'http://keycloak.url/auth/admin/realms/master/clients?clientId=one_client': create_wrapper(
-            json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
+        json.dumps([{'id': '333-333', 'clientId': 'one_client'}])),
 }
 
 

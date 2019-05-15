@@ -395,7 +395,7 @@ class KeycloakAPI(object):
         except Exception as e:
             self.module.fail_json(
                 msg='Could not obtain role %s for realm %s: %s'
-                    % (to_text(list(role_id.values())[0]),  to_text(realm), to_text(e)))
+                    % (to_text(list(role_id.values())[0]), to_text(realm), to_text(e)))
 
     def delete_role(self, role_id, realm="master"):
         """ Delete a role from Keycloak
@@ -834,5 +834,3 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='API returned incorrect JSON when trying to get: %s' % (url))
         except Exception as e:
             self.module.fail_json(msg='Could not obtain url: %s' % (url))
-
-
