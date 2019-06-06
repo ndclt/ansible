@@ -4,6 +4,11 @@
 # Copyright: (c) 2018, Nicolas Duclert <nicolas.duclert@metronlab.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import absolute_import, division, print_function
+
+from copy import deepcopy
+
+from ansible.module_utils.common.dict_transformations import recursive_diff
+
 __metaclass__ = type
 
 ANSIBLE_METADATA = {
@@ -224,7 +229,17 @@ def run_module():
         create_role(kc, result, realm, given_role_id, client_id)
     else:
         if state == 'present':
-            updating_role(kc, result, realm, given_role_id, client_uuid)
+            if client_uuid:
+                # When the role is in a client, the API return an 400 status if there is nothing to do.
+                role_representation = deepcopy(result['proposed'])
+                role_representation.pop('clientId')
+                _, role_diff = recursive_diff(before_role, role_representation)
+                if role_diff:
+                    updating_role(kc, result, realm, given_role_id, client_uuid)
+                else:
+                    do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid)
+            else:
+                updating_role(kc, result, realm, given_role_id, client_uuid)
         else:
             deleting_role(kc, result, realm, given_role_id, client_uuid)
 
@@ -301,19 +316,24 @@ def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid
     module = kc.module
     message_role_id = list(given_role_id.values())[0]
     if module._diff:
-        result['diff'] = dict(before='', after='')
-    if client_id:
-        if not client_uuid:
-            result['msg'] = (
-                'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
-                % (to_text(client_id), realm, to_text(message_role_id)))
-        else:
-            result['msg'] = (
-                'Role %s does not exist in client %s of realm %s, doing nothing.'
-                % (to_text(message_role_id), to_text(client_id), to_text(realm)))
+        result['diff'] = dict(before=result['existing'], after=result['existing'])
+    if result['existing']:
+        result['msg'] = (
+            'Role %s in client %s of realm %s is not modified, doing nothing.' % (
+            to_text(message_role_id), to_text(client_id), to_text(realm)))
     else:
-        result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
-                         % (to_text(message_role_id), to_text(realm)))
+        if client_id:
+            if not client_uuid:
+                result['msg'] = (
+                    'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
+                    % (to_text(client_id), realm, to_text(message_role_id)))
+            else:
+                result['msg'] = (
+                    'Role %s does not exist in client %s of realm %s, doing nothing.'
+                    % (to_text(message_role_id), to_text(client_id), to_text(realm)))
+        else:
+            result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
+                             % (to_text(message_role_id), to_text(realm)))
     module.exit_json(**result)
 
 
