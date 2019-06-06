@@ -182,6 +182,48 @@ def test_state_absent_should_not_create_absent_role(
     assert ansible_exit_json['msg'] == (error_message + ', doing nothing.')
 
 
+@pytest.fixture()
+def mock_already_here_role_in_client_url(mocker):
+    already_here_role_url = CONNECTION_DICT.copy()
+    already_here_role_url.update({
+        'http://keycloak.url/auth/admin/realms/master/clients?clientId=client-with-role': create_wrapper(json.dumps(MASTER_CLIENTS)),
+        'http://keycloak.url/auth/admin/realms/master/clients/11111111-1111-1111-1111-111111111111/roles/already_here': create_wrapper((json.dumps(
+            {'name': 'already_here',
+             'description': '',
+             'composite': False, 'attributes': {}, 'clientRole': True,
+             'containerId': '11111111-1111-1111-1111-111111111111',
+             'id': 'gggggggg-1111-1111-1111-111111111111'}
+        )))
+    })
+    return mocker.patch(
+        'ansible.module_utils.keycloak.open_url',
+        side_effect=build_mocked_request(count(), already_here_role_url),
+        autospec=True
+    )
+
+
+def test_update_role_in_client_with_same_values_should_not_do_something(monkeypatch, mock_already_here_role_in_client_url):
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_role.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'present',
+        'name': 'already_here',
+        'client_id': 'client-with-role'
+    }
+    set_module_args(arguments)
+
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_role.run_module()
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == (
+        'Role already_here in client client-with-role of realm master is not modified, doing nothing.')
+
+
 @pytest.fixture
 def mock_delete_role_urls(mocker):
     delete_role_urls = CONNECTION_DICT.copy()
