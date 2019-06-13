@@ -832,9 +832,10 @@ end_state:
     }
 '''
 
-from ansible.module_utils.keycloak import KeycloakAPI, camel, keycloak_argument_spec
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.identity.keycloak.keycloak import KeycloakAuthorizationHeader
+from ansible.module_utils.identity.keycloak.keycloak import (
+    KeycloakAuthorizationHeader, KeycloakAPI, camel, keycloak_argument_spec
+)
 
 
 def main():
