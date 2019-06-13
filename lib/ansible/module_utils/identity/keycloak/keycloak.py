@@ -941,7 +941,7 @@ class KeycloakAPI(object):
         """
         groups_url = URL_GROUPS.format(url=self.baseurl, realm=realm)
         try:
-            return json.load(open_url(groups_url, method="GET", headers=self.restheaders,
+            return json.load(open_url(groups_url, method="GET", headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
         except Exception as e:
             self.module.fail_json(msg="Could not fetch list of groups in realm %s: %s"
@@ -958,7 +958,7 @@ class KeycloakAPI(object):
         """
         groups_url = URL_GROUP.format(url=self.baseurl, realm=realm, groupid=gid)
         try:
-            return json.load(open_url(groups_url, method="GET", headers=self.restheaders,
+            return json.load(open_url(groups_url, method="GET", headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
 
         except HTTPError as e:
@@ -1034,7 +1034,7 @@ class KeycloakAPI(object):
         """
         groups_url = URL_GROUPS.format(url=self.baseurl, realm=realm)
         try:
-            return open_url(groups_url, method='POST', headers=self.restheaders,
+            return open_url(groups_url, method='POST', headers=self.restheaders.header,
                             data=json.dumps(grouprep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg="Could not create group %s in realm %s: %s"
@@ -1049,7 +1049,7 @@ class KeycloakAPI(object):
         group_url = URL_GROUP.format(url=self.baseurl, realm=realm, groupid=grouprep['id'])
 
         try:
-            return open_url(group_url, method='PUT', headers=self.restheaders,
+            return open_url(group_url, method='PUT', headers=self.restheaders.header,
                             data=json.dumps(grouprep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update group %s in realm %s: %s'
@@ -1086,7 +1086,7 @@ class KeycloakAPI(object):
         # should have a good groupid by here.
         group_url = URL_GROUP.format(realm=realm, groupid=groupid, url=self.baseurl)
         try:
-            return open_url(group_url, method='DELETE', headers=self.restheaders,
+            return open_url(group_url, method='DELETE', headers=self.restheaders.header,
                             validate_certs=self.validate_certs)
 
         except Exception as e:
