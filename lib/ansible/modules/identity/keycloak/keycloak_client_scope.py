@@ -5,6 +5,7 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 ANSIBLE_METADATA = {
@@ -278,6 +279,7 @@ import json
 from copy import deepcopy
 from ansible.module_utils.keycloak import KeycloakAPI, keycloak_argument_spec, check_role_representation
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.identity.keycloak.keycloak import KeycloakAuthorizationHeader
 
 
 def contains_role(roles, rolename):
@@ -326,7 +328,17 @@ def main():
     result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
 
     # Obtain access token, initialize API
-    kc = KeycloakAPI(module)
+    # Obtain access token, initialize API
+    connection_header = KeycloakAuthorizationHeader(
+        base_url=module.params.get('auth_keycloak_url'),
+        validate_certs=module.params.get('validate_certs'),
+        auth_realm=module.params.get('auth_realm'),
+        client_id=module.params.get('auth_client_id'),
+        auth_username=module.params.get('auth_username'),
+        auth_password=module.params.get('auth_password'),
+        client_secret=module.params.get('auth_client_secret'),
+    )
+    kc = KeycloakAPI(module, connection_header)
 
     # Initialize some general variables
     realm = module.params.get('realm')
