@@ -499,7 +499,7 @@ class KeycloakAPI(object):
         url = URL_CLIENT_SCOPE_MAPPINGS.format(url=self.baseurl, realm=realm, id=id, target=target)
 
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders,
+            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain scope mappings for %s in realm %s: %s'
@@ -525,7 +525,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM.format(url=self.baseurl, realm=realm, id=id,
                                                          target=target)
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders,
+            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain scope mapping for %s in realm %s: %s'
@@ -552,7 +552,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM_AVAILABLE.format(url=self.baseurl, realm=realm,
                                                                    id=id, target=target)
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders,
+            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain available roles for realm %s: %s'
@@ -579,7 +579,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM.format(url=self.baseurl, realm=realm, id=id,
                                                          target=target)
         try:
-            return open_url(url, method='POST', headers=self.restheaders, data=json.dumps(roles),
+            return open_url(url, method='POST', headers=self.restheaders.header, data=json.dumps(roles),
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create/update scope mapping for %s in realm %s: %s'
@@ -603,7 +603,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM.format(url=self.baseurl, realm=realm, id=id,
                                                          target=target)
         try:
-            return open_url(url, method='DELETE', headers=self.restheaders, data=json.dumps(roles),
+            return open_url(url, method='DELETE', headers=self.restheaders.header, data=json.dumps(roles),
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create/update scope mapping for %s in realm %s: %s'
