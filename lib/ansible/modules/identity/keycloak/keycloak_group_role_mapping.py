@@ -145,8 +145,9 @@ roles_in_group:
 from ansible.module_utils.basic import AnsibleModule
 
 from ansible.module_utils._text import to_text
-from ansible.module_utils.keycloak import KeycloakAPI, keycloak_argument_spec
-from ansible.module_utils.identity.keycloak.keycloak import KeycloakAuthorizationHeader
+from ansible.module_utils.identity.keycloak.keycloak import (
+    KeycloakAuthorizationHeader, KeycloakAPI, keycloak_argument_spec
+)
 
 
 def run_module():
