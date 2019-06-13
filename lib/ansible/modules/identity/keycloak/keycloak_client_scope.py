@@ -277,9 +277,10 @@ end_state:
 
 import json
 from copy import deepcopy
-from ansible.module_utils.keycloak import KeycloakAPI, keycloak_argument_spec, check_role_representation
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.identity.keycloak.keycloak import KeycloakAuthorizationHeader
+from ansible.module_utils.identity.keycloak.keycloak import(
+    KeycloakAPI, keycloak_argument_spec, check_role_representation, KeycloakAuthorizationHeader
+)
 
 
 def contains_role(roles, rolename):
