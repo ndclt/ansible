@@ -426,7 +426,7 @@ class KeycloakAPI(object):
         url = URL_REALM.format(url=self.baseurl, realm=realm)
 
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders,
+            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
 
         except HTTPError as e:
@@ -450,7 +450,7 @@ class KeycloakAPI(object):
         url = URL_REALMS.format(url=self.baseurl)
 
         try:
-            return open_url(url, method='POST', headers=self.restheaders,
+            return open_url(url, method='POST', headers=self.restheaders.header,
                             data=json.dumps(realmrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create realm: %s'
@@ -466,7 +466,7 @@ class KeycloakAPI(object):
         url = URL_REALM.format(url=self.baseurl, realm=realm)
 
         try:
-            return open_url(url, method='PUT', headers=self.restheaders,
+            return open_url(url, method='PUT', headers=self.restheaders.header,
                             data=json.dumps(realmrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update realm %s: %s'
@@ -481,7 +481,7 @@ class KeycloakAPI(object):
         url = URL_REALM.format(url=self.baseurl, realm=realm)
 
         try:
-            return open_url(url, method='DELETE', headers=self.restheaders,
+            return open_url(url, method='DELETE', headers=self.restheaders.header,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete realm %s: %s'
