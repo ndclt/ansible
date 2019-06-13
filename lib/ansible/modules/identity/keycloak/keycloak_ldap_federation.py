@@ -13,6 +13,32 @@ ANSIBLE_METADATA = {
     'supported_by': 'community',
 }
 
+EXAMPLES = r'''
+- name: Create a keycloak federation
+  keycloak_ldap_federation:
+    auth_client_id: admin-cli
+    auth_keycloak_url: https://auth.example.com/auth
+    auth_realm: master
+    auth_username: USERNAME
+    auth_password: PASSWORD
+    realm: master
+    name: my-company-ldap
+    state: present
+    edit_mode: WRITABLE
+    synchronize_registrations: True,
+    username_ldap_attribute: cn
+    rdn_ldap_attribute: cn
+    user_object_classes: inetOrgPerson, organizationalPerson
+    connection_url: ldap://openldap
+    users_dn: ou=People,dc=my-company
+    bind_dn: cn=admin,dc=my-company
+    bind_credential: ldap_admin_password
+    uuid_ldap_attribute: entryUUID
+    search_scope: subtree
+    use_truststore_spi: never
+    test_authentication: True
+'''
+
 import json
 from copy import deepcopy
 from ansible.module_utils._text import to_text
