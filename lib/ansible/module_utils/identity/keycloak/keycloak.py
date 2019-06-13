@@ -843,7 +843,7 @@ class KeycloakAPI(object):
 
         try:
             return json.load(
-                open_url(role_url, method='GET', headers=self.restheaders,
+                open_url(role_url, method='GET', headers=self.restheaders.header,
                          validate_certs=self.validate_certs))
         except HTTPError as e:
             if e.code == 404:
@@ -870,7 +870,7 @@ class KeycloakAPI(object):
         role_url = URL_REALM_ROLE_BY_ID.format(url=self.baseurl, realm=quote(realm), id=quote(role_id))
 
         try:
-            return open_url(role_url, method='DELETE', headers=self.restheaders,
+            return open_url(role_url, method='DELETE', headers=self.restheaders.header,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete role %s in realm %s: %s'
@@ -902,7 +902,7 @@ class KeycloakAPI(object):
             role_url = URL_REALM_ROLES.format(url=self.baseurl, realm=quote(realm))
 
         try:
-            return open_url(role_url, method='POST', headers=self.restheaders,
+            return open_url(role_url, method='POST', headers=self.restheaders.header,
                             data=json.dumps(role_representation), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(
@@ -920,7 +920,7 @@ class KeycloakAPI(object):
         role_url = self.get_role_url(role_id, realm, client_uuid)
 
         try:
-            return open_url(role_url, method='PUT', headers=self.restheaders,
+            return open_url(role_url, method='PUT', headers=self.restheaders.header,
                             data=json.dumps(role_representation),
                             validate_certs=self.validate_certs)
         except Exception as e:
