@@ -146,6 +146,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible.module_utils._text import to_text
 from ansible.module_utils.keycloak import KeycloakAPI, keycloak_argument_spec
+from ansible.module_utils.identity.keycloak.keycloak import KeycloakAuthorizationHeader
 
 
 def run_module():
@@ -182,7 +183,16 @@ def run_module():
     realm = module.params.get('realm')
     state = module.params.get('state')
     result = {}
-    kc = KeycloakAPI(module)
+    connection_header = KeycloakAuthorizationHeader(
+        base_url=module.params.get('auth_keycloak_url'),
+        validate_certs=module.params.get('validate_certs'),
+        auth_realm=module.params.get('auth_realm'),
+        client_id=module.params.get('auth_client_id'),
+        auth_username=module.params.get('auth_username'),
+        auth_password=module.params.get('auth_password'),
+        client_secret=module.params.get('auth_client_secret'),
+    )
+    kc = KeycloakAPI(module, connection_header)
 
     given_role_id = {'name': module.params.get('role_name')}
     if not given_role_id['name']:
