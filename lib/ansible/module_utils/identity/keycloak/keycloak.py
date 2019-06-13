@@ -609,7 +609,6 @@ class KeycloakAPI(object):
             self.module.fail_json(msg='Could not create/update scope mapping for %s in realm %s: %s'
                                       % (id, realm, str(e)))
 
-
     def create_link_between_group_and_role(self, group_uuid, role, client_uuid=None, realm='master'):
         self._modify_link_between_group_and_role('POST', group_uuid, role, client_uuid, realm)
 
@@ -632,7 +631,7 @@ class KeycloakAPI(object):
                 group_id=group_uuid
             )
         try:
-            return open_url(url=url, method=method, headers=self.restheaders,
+            return open_url(url=url, method=method, headers=self.restheaders.header,
                             validate_certs=self.validate_certs, data=json.dumps([role]))
         except Exception as e:
             self.module.fail_json(
@@ -1005,7 +1004,7 @@ class KeycloakAPI(object):
         )
         try:
             return json.load(open_url(url=effective_role_url, method="GET",
-                                      headers=self.restheaders,
+                                      headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
         except Exception as e:
             self.module.fail_json(
@@ -1020,7 +1019,7 @@ class KeycloakAPI(object):
         )
         try:
             return json.load(open_url(url=effective_role_url, method="GET",
-                                      headers=self.restheaders,
+                                      headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
         except Exception as e:
             self.module.fail_json(
