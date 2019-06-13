@@ -650,7 +650,7 @@ class KeycloakAPI(object):
             userlist_url += '?userId=%s' % filter
 
         try:
-            user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders,
+            user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders.header,
                                            validate_certs=self.validate_certs))
             return user_json
         except ValueError as e:
@@ -671,7 +671,7 @@ class KeycloakAPI(object):
 
         try:
             return json.load(
-                open_url(url, method='GET', headers=self.restheaders, validate_certs=self.validate_certs))
+                open_url(url, method='GET', headers=self.restheaders.header, validate_certs=self.validate_certs))
         except HTTPError as e:
             if e.code == 404:
                 return None
@@ -737,7 +737,7 @@ class KeycloakAPI(object):
         user_representation = self._put_values_in_list(user_representation, ['credentials'])
 
         try:
-            return open_url(user_url, method='POST', headers=self.restheaders,
+            return open_url(user_url, method='POST', headers=self.restheaders.header,
                             data=json.dumps(user_representation), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create user %s in realm %s: %s'
@@ -763,7 +763,7 @@ class KeycloakAPI(object):
         user_url = URL_USER.format(url=self.baseurl, realm=realm, id=uuid)
 
         try:
-            return open_url(user_url, method='PUT', headers=self.restheaders,
+            return open_url(user_url, method='PUT', headers=self.restheaders.header,
                             data=json.dumps(user_representation),
                             validate_certs=self.validate_certs)
         except Exception as e:
@@ -802,7 +802,7 @@ class KeycloakAPI(object):
         user_url = URL_USER.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return open_url(user_url, method='DELETE', headers=self.restheaders,
+            return open_url(user_url, method='DELETE', headers=self.restheaders.header,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete user %s in realm %s: %s'
@@ -810,7 +810,7 @@ class KeycloakAPI(object):
 
     def get_json_from_url(self, url):
         try:
-            user_json = json.load(open_url(url, method='GET', headers=self.restheaders,
+            user_json = json.load(open_url(url, method='GET', headers=self.restheaders.header,
                                            validate_certs=self.validate_certs))
             return user_json
         except ValueError as e:
