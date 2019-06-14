@@ -88,7 +88,7 @@ def mock_doing_nothing_urls(mocker):
             json.dumps([])),
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), doing_nothing_urls),
         autospec=True
     )
@@ -150,7 +150,7 @@ def mock_creation_url(mocker):
             json.dumps({'id': '222-222', 'name': 'one_role'})),
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), creation_urls),
         autospec=True
     )
@@ -208,7 +208,7 @@ def existing_nothing_to_do(mocker):
         ),
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), nothing_to_do_url),
         autospec=True
     )
@@ -264,7 +264,7 @@ def to_delete(mocker):
         )
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), delete_urls),
         autospec=True
     )
@@ -317,7 +317,7 @@ def wrong_parameter_url(mocker):
         'http://keycloak.url/auth/admin/realms/master/clients/333-333/roles/doesnotexist': raise_404('333-333/roles/doesnotexist'),
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), wrong_parameter_urls),
         autospec=True
     )
