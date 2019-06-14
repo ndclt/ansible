@@ -546,10 +546,13 @@ SEARCH_SCOPE = {'one level': 1, 'subtree': 2}
 class LdapFederation(object):
     """Keycloak LDAP Federation class.
     """
+
     def __init__(self, module, connection_header):
         self.module = module
         self.restheaders = connection_header
-        self.federation = self.get_federation()
+        self.federation = self._clean_payload(
+            self.get_federation(), credential_clean=False
+        )
         try:
             self.uuid = self.federation['id']
         except KeyError:
@@ -756,14 +759,29 @@ class LdapFederation(object):
         :return: a boolean showing if the connection or the authentication
         works.
         """
-        payload = {
-            'bindCredential': self.module.params.get('bind_credential', ''),
-            'bindDn': self.module.params.get('bind_dn', ''),
-            'connectionUrl': self.module.params.get('connection_url'),
-            'connectionTimeout': '',
-            'realm': self.module.params.get('realm'),
-            'useTruststoreSpi': self.module.params.get('useTruststoreSpi', 'ldapsOnly'),
-        }
+        try:
+            trust_store = self.federation['config']['useTruststoreSpi']
+        except KeyError:
+            trust_store = 'ldapsOnly'
+        federation_keys = [
+            'bind_credential',
+            'bind_dn',
+            'connection_url',
+            'realm',
+            'use_truststore_spi',
+        ]
+        payload = {'connectionTimeout': ''}
+        for one_key in federation_keys:
+            value = self.module.params[one_key]
+            if value:
+                payload.update({camel(one_key): value})
+            else:
+                if one_key == 'use_truststore_spi':
+                    payload.update({camel(one_key): trust_store})
+                else:
+                    payload.update(
+                        {camel(one_key): self.federation['config'].get(camel(one_key), '')}
+                    )
         payload.update(extra_arguments)
         test_url = TEST_LDAP_CONNECTION.format(
             url=self.module.params.get('auth_keycloak_url'),
@@ -849,21 +867,24 @@ class LdapFederation(object):
         return self._clean_payload(self._create_payload())
 
     @staticmethod
-    def _clean_payload(payload):
+    def _clean_payload(payload, credential_clean=True):
         """Clean the payload from credentials and extra list.
 
         :param payload: the payload given to the post or put request.
         :return: the cleaned payload
         :rtype: dict
         """
+        if not payload:
+            return {}
         clean_payload = deepcopy(payload)
         old_config = clean_payload.pop('config')
         new_config = {}
         for key, value in old_config.items():
-            if key != 'bindCredential':
-                new_config.update({key: value[0]})
-            else:
+            if key == 'bindCredential' and credential_clean:
                 new_config.update({key: 'no_log'})
+            else:
+                new_config.update({key: value[0]})
+
         clean_payload.update({'config': new_config})
         return clean_payload
 
@@ -912,7 +933,9 @@ def run_module():
         federation_uuid=dict(type='str', aliases=['federationUuid']),
         enable=dict(type='bool'),
         pagination=dict(type='bool'),
-        vendor=dict(type='str', choices=['other', 'ad', 'rhds', 'tivoli', 'edirectory']),
+        vendor=dict(
+            type='str', choices=['other', 'ad', 'rhds', 'tivoli', 'edirectory']
+        ),
         edit_mode=dict(
             type='str',
             choices=['READ_ONLY', 'UNSYNCED', 'WRITABLE'],
@@ -939,7 +962,9 @@ def run_module():
             type='str',
             aliases=['rdnLDAPAttribute', 'rdnLdapAttribute', 'rdn_LDAP_attribute'],
         ),
-        user_object_classes=dict(type='list', elements='str', aliases=['userObjectClasses']),
+        user_object_classes=dict(
+            type='list', elements='str', aliases=['userObjectClasses']
+        ),
         connection_url=dict(type='str', aliases=['connectionUrl']),
         users_dn=dict(type='str', aliases=['usersDn']),
         bind_dn=dict(type='str', aliases=['bindDn']),
