@@ -63,6 +63,8 @@ SEARCH_SCOPE = {'one level': 1, 'subtree': 2}
 
 
 class LdapFederation(object):
+    """Keycloak LDAP Federation class.
+    """
     def __init__(self, module, connection_header):
         self.module = module
         self.restheaders = connection_header
@@ -73,6 +75,10 @@ class LdapFederation(object):
             self.uuid = ''
 
     def _get_federation_url(self):
+        """Create the url in order to get the federation from the given argument (uuid or name)
+        :return: the url as string
+        :rtype: str
+        """
         try:
             return USER_FEDERATION_BY_UUID_URL.format(
                 url=self.module.params.get('auth_keycloak_url'),
@@ -93,6 +99,12 @@ class LdapFederation(object):
             )
 
     def get_federation(self):
+        """Get the federation information from keycloak
+
+        :return: the federation representation as a dictionary, if the asked
+        representation does not exist, a empty dictionary is returned.
+        :rtype: dict
+        """
         get_url = self._get_federation_url()
         realm = self.module.params.get('realm')
         try:
@@ -135,11 +147,17 @@ class LdapFederation(object):
 
     @property
     def given_id(self):
+        """Get the asked id given by the user.
+
+        :return the asked id given by the user as a name or an uuid.
+        :rtype: str
+        """
         if self.module.params.get('federation_id'):
             return self.module.params.get('federation_id')
         return self.module.params.get('federation_uuid')
 
     def delete(self):
+        """Delete the federation"""
         federation_url = self._get_federation_url()
         try:
             open_url(
@@ -155,7 +173,12 @@ class LdapFederation(object):
             )
 
     def update(self):
-        federation_payload = self.create_payload()
+        """Update the federation
+
+        :return: the representation of the updated federation
+        :rtype: dict
+        """
+        federation_payload = self._create_payload()
         put_url = USER_FEDERATION_BY_UUID_URL.format(
             url=self.module.params.get('auth_keycloak_url'),
             realm=quote(self.module.params.get('realm')),
@@ -182,7 +205,17 @@ class LdapFederation(object):
         return self._clean_payload(federation_payload)
 
     def create(self):
-        federation_payload = self.create_payload()
+        """Create the federation from the given arguments.
+
+        Before create the federation, there is a check concerning the mandatory
+        arguments waited by keycloak.
+        If asked by the user, before creating the federation, the connection or
+        the authentication can be tested.
+
+        :return: the representation of the updated federation
+        :rtype: dict
+        """
+        federation_payload = self._create_payload()
         self.check_mandatory_arguments(federation_payload)
         post_url = COMPONENTS_URL.format(
             url=self.module.params.get('auth_keycloak_url'),
@@ -209,6 +242,7 @@ class LdapFederation(object):
         return self._clean_payload(federation_payload)
 
     def _test_connection(self):
+        """Test the connection to the LDAP server"""
         if not self._call_test_url({'action': 'testConnection'}):
             self.module.fail_json(
                 msg='The url connection %s cannot be reached.'
@@ -216,6 +250,7 @@ class LdapFederation(object):
             )
 
     def _test_authentication(self):
+        """Test the authentication to the LDAP server with the given binding credentials."""
         if not self._call_test_url({'action': 'testAuthentication'}):
             self.module.fail_json(
                 msg='The user %s cannot logged in the ldap at %s, '
@@ -227,6 +262,19 @@ class LdapFederation(object):
             )
 
     def _call_test_url(self, extra_arguments):
+        """Call the keycloak url testing credentials against the LDAP server.
+
+        The same url is called for connection and authentication, only the
+        extra_arguments given by calling function is necessary for changing
+        the tested functionality.
+        The connection or authentication failure is identified with the 400
+        http status code.
+
+        :param extra_arguments: a dictionary with the action to do (
+        authentication or connection)
+        :return: a boolean showing if the connection or the authentication
+        works.
+        """
         payload = {
             'bindCredential': self.module.params.get('bind_credential', ''),
             'bindDn': self.module.params.get('bind_dn', ''),
@@ -266,7 +314,20 @@ class LdapFederation(object):
             )
         return True
 
-    def create_payload(self):
+    def _create_payload(self):
+        """Create the payload for updating or creating a LDAP federation.
+
+        Keycloak is waiting for a particular type of json for a LDAP federation:
+        {
+          'providerId': 'ldap',
+          'providerType': 'org.keycloak.storage.UserStorageProvider',
+          'config': {user parameters}
+        }.
+        And all user parameters must be in a list of one element.
+
+        :return: the payload to put in the post or put request.
+        :rtype: dict
+        """
         translation = {'federation_id': 'name', 'federation_uuid': 'id'}
         config = {}
         payload = {
@@ -296,10 +357,21 @@ class LdapFederation(object):
         return payload
 
     def get_result(self):
-        return self._clean_payload(self.create_payload())
+        """Get the payload cleaned of credentials and lists.
+
+        :return: the cleaned payload
+        :rtype: dict
+        """
+        return self._clean_payload(self._create_payload())
 
     @staticmethod
     def _clean_payload(payload):
+        """Clean the payload from credentials and extra list.
+
+        :param payload: the payload given to the post or put request.
+        :return: the cleaned payload
+        :rtype: dict
+        """
         clean_payload = deepcopy(payload)
         old_config = clean_payload.pop('config')
         new_config = {}
@@ -312,6 +384,12 @@ class LdapFederation(object):
         return clean_payload
 
     def check_mandatory_arguments(self, creation_payload):
+        """Check if mandatory arguments for federation creation are present.
+
+        If there are not present, this function exits the module with a fail_json.
+
+        :param creation_payload: the payload to send to the post request.
+        """
         mandatory_elements = [
             'priority',
             'vendor',
@@ -460,7 +538,7 @@ def run_module():
             if not module.check_mode:
                 payload = ldap_federation.create()
             else:
-                payload = ldap_federation.create_payload()
+                payload = ldap_federation.get_result()
 
             result['msg'] = to_text(
                 'Federation {given_id} created.'.format(
@@ -473,7 +551,7 @@ def run_module():
             if not module.check_mode:
                 payload = ldap_federation.update()
             else:
-                payload = ldap_federation.create_payload()
+                payload = ldap_federation.get_result()
             result['msg'] = to_text(
                 'Federation {given_id} updated.'.format(
                     given_id=ldap_federation.given_id
