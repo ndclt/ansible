@@ -826,6 +826,9 @@ class LdapFederation(object):
                 else:
                     if key == 'search_scope':
                         config.update({camel(key): [SEARCH_SCOPE[value]]})
+                    elif key == 'user_object_classes':
+                        value.sort()
+                        config.update({camel(key): [', '.join(value)]})
                     else:
                         config.update({camel(key).replace('Ldap', 'LDAP'): [value]})
         try:
@@ -936,7 +939,7 @@ def run_module():
             type='str',
             aliases=['rdnLDAPAttribute', 'rdnLdapAttribute', 'rdn_LDAP_attribute'],
         ),
-        user_object_classes=dict(type='str', aliases=['userObjectClasses']),
+        user_object_classes=dict(type='list', elements='str', aliases=['userObjectClasses']),
         connection_url=dict(type='str', aliases=['connectionUrl']),
         users_dn=dict(type='str', aliases=['usersDn']),
         bind_dn=dict(type='str', aliases=['bindDn']),
