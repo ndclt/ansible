@@ -483,12 +483,16 @@ def mock_update_url(mocker):
                         'id': '123-123',
                         'name': 'company-ldap',
                         'parentId': 'master',
-                        'config': {'pagination': True},
+                        'config': {
+                            'pagination': [True],
+                            'bindDn': ['cn:admin'],
+                        },
                     }
                 ]
             )
         ),
         'http://keycloak.url/auth/admin/realms/master/components/123-123': None,
+        'http://keycloak.url/auth/admin/realms/master/testLDAPConnection': None,
     }
     return mocker.patch(
         'ansible.modules.identity.keycloak.keycloak_ldap_federation.open_url',
@@ -530,3 +534,30 @@ def test_state_present_should_update_existing_federation(
     }
     diff_result = recursive_diff(ansible_exit_json['ldap_federation'], reference_result)
     assert not diff_result
+
+
+def test_state_present_should_update_existing_federation_with_connect_check(
+    monkeypatch, mock_get_token, mock_update_url
+):
+    monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'present',
+        'federation_id': 'company-ldap',
+        'uuid_ldap_attribute': 'newEntryUUID',
+        'bind_credential': 'new_admin_password',
+        'test_authentication': True,
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson):
+        keycloak_ldap_federation.run_module()
+    calls = mock_update_url.mock_calls
+    for one_call in filterfalse(lambda x: 'testLDAPConnection' not in x.args[0], calls):
+        send_data = one_call.kwargs['data']
+        assert urlencode({'bindCredential': 'new_admin_password'}) in send_data
+        assert urlencode({'bindDn': 'cn:admin'}) in send_data
