@@ -155,7 +155,7 @@ def mock_delete_url(mocker):
                         'id': '123-123',
                         'name': 'ldap-to-delete',
                         'parentId': 'master',
-                        'config': {'pagination': True},
+                        'config': {'pagination': [True]},
                     }
                 ]
             )
@@ -168,7 +168,7 @@ def mock_delete_url(mocker):
                         'id': '123-123',
                         'name': 'ldap-to-delete',
                         'parentId': 'master',
-                        'config': {'pagination': True},
+                        'config': {'pagination': [True]},
                     }
                 )
             ),
