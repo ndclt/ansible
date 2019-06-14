@@ -164,7 +164,7 @@ GET_USER_BY_ID = """{
 @pytest.fixture
 def url_mock_keycloak(mocker):
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), RESPONSE_ADMIN_ONLY),
         autospec=True
     )
@@ -313,7 +313,7 @@ def build_user_update_request(request):
 def dynamic_url_for_user_update(mocker, build_user_update_request):
     parameters, response_dictionary = build_user_update_request
     return parameters, mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), response_dictionary),
         autospec=True
     )
@@ -376,7 +376,7 @@ def url_for_fake_update(mocker):
             'GET': create_wrapper(UPDATED_USER)
         }})
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), new_response_dictionary),
         autospec=True
     )
