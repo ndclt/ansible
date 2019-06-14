@@ -74,6 +74,78 @@ URL_REALM = "{url}/admin/realms/{realm}"
 URL_REALMS = "{url}/admin/realms"
 
 
+def get_on_url(url, restheaders, module, description):
+    """Get a keycloak url
+
+    :param url: the url to get
+    :param restheaders: the keycloak restheader with the token
+    :param module: the module calling this function
+    :param description: the get object description put in the error message
+    if the open_url fails
+    :return: the read json from the url
+    """
+    validate_certs = module.params.get('validate_certs')
+    realm = module.params.get('realm')
+    try:
+        return json.load(open_url(url, method='GET',
+                                  headers=restheaders.header,
+                                  validate_certs=validate_certs))
+    except ValueError as e:
+        module.fail_json(
+            msg='API returned incorrect JSON when trying to obtain %s for realm %s: %s'
+                % (description, realm, str(e)))
+    except Exception as e:
+        module.fail_json(
+            msg='Could not obtain %s for realm %s: %s' % (description, realm, str(e)))
+
+
+def put_on_url(url, restheaders, module, description, representation=None):
+    """Put on a keycloak url
+
+    :param url: the url to put
+    :param restheaders: the keycloak restheader with the token
+    :param module: the module calling this function
+    :param description: the put object description put in the error message
+    if the open_url fails
+    :param representation: the object as a dictionary to put on keycloak
+    """
+    validate_certs = module.params.get('validate_certs')
+    realm = module.params.get('realm')
+    if not representation:
+        pushed_data = json.dumps(representation)
+    else:
+        pushed_data = {}
+    try:
+        return open_url(url, method='PUT',
+                        headers=restheaders.header,
+                        data=pushed_data,
+                        validate_certs=validate_certs)
+    except Exception as e:
+        module.fail_json(
+            msg="Could not modified %s in realm %s: %s" % (description, realm, str(e)))
+
+
+def delete_on_url(url, restheaders, module, description):
+    """Delete a keycloak url
+
+    :param url: the url to delete
+    :param restheaders: the keycloak restheader with the token
+    :param module: the module calling this function
+    :param description: the deleted object description put in the error message
+    if the open_url fails
+    :return: the read json from the url
+    """
+    validate_certs = module.params.get('validate_certs')
+    realm = module.params.get('realm')
+    try:
+        return open_url(url, method='DELETE',
+                        headers=restheaders.header,
+                        validate_certs=validate_certs)
+    except Exception as e:
+        module.fail_json(
+            msg="Could not delete %s in realm %s: %s" % (description, realm, str(e)))
+
+
 def keycloak_argument_spec():
     """
     Returns argument_spec of options common to keycloak_*-modules
@@ -232,7 +304,6 @@ class KeycloakAPI(object):
         try:
             return json.load(open_url(client_url, method='GET', headers=self.restheaders.header,
                                       validate_certs=self.validate_certs))
-
         except HTTPError as e:
             if e.code == 404:
                 return None
@@ -648,7 +719,6 @@ class KeycloakAPI(object):
         userlist_url = URL_USERS.format(url=self.baseurl, realm=realm)
         if filter is not None:
             userlist_url += '?userId=%s' % filter
-
         try:
             user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders.header,
                                            validate_certs=self.validate_certs))
@@ -668,7 +738,6 @@ class KeycloakAPI(object):
         :return: dict of user representation or None if none matching exists
         """
         url = URL_USER.format(url=self.baseurl, id=id, realm=realm)
-
         try:
             return json.load(
                 open_url(url, method='GET', headers=self.restheaders.header, validate_certs=self.validate_certs))
