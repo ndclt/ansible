@@ -13,6 +13,218 @@ ANSIBLE_METADATA = {
     'supported_by': 'community',
 }
 
+DOCUMENTATION = r'''
+---
+module: keycloak_ldap_federation
+
+short_description: Allows administration of Keycloak LDAP federation via Keycloak API
+
+description:
+    - This module allows  you to add, remove or modify Keycloak LDAP federation via the Keycloak API.
+      It requires access to the REST API via OpenID Connect; the user connecting and the client being
+      used must have the requisite access rights. In a default Keycloak installation, admin-cli
+      and an admin user would work, as would a separate client definition with the scope tailored
+      to your needs and a user having the expected roles.
+    
+    - The names of module options are snake_cased versions of the camelCase ones found in the
+      Keycloak API and its documentation at U(http://www.keycloak.org/docs-api/3.3/rest-api/). 
+
+    - At creation and update, this module allows you to test the connection or the authentication 
+      to the LDAP service from the given arguments. If the connection or the authentication does
+      not work, the module fails.
+
+    - When updating a LDAP federation, where possible provide the group ID to the module. 
+      This removes a lookup to the API to translate the name into the group ID.
+
+version_added: "2.9"
+
+options:
+    state:
+        description:
+            - State of the LDAP federation.
+            - On C(present), the group will be created if it does not yet exist, or updated with the parameters you provide.
+            - On C(absent), the group will be removed if it exists.
+        required: true
+        default: present
+        type: str
+        choices:
+            - present
+            - absent
+
+    realm:
+        type: str
+        description:
+            - They Keycloak realm under which this LDAP federation resides.
+        default: 'master'
+
+    federation_id:
+        description:
+            - The name of the federation
+            - Also called ID of the federationin the table of federations or
+              the console display name in the detailed view of a federation
+            - This parameter is mutually exclusive with federation_uuid and one
+              of them is required by the module
+        type: str
+        aliases: [ federerationId ] 
+
+    federation_uuid:
+        description:
+            - The uuid of the federation
+            - This parameter is mutually exclusive with federation_id and one
+              of them is required by the module
+        type: str
+        aliases: [ federationUuid ]
+
+    enable:
+        description:
+            - whether the federation will be enable
+        type: bool
+
+    pagination:
+        description:
+            - Does the LDAP server supports pagination.
+        type: bool
+
+    vendor:
+        description:
+            - LDAP provider
+            - Mandatory when creating the LDAP federation
+        choices:
+            - other
+            - ad
+            - rhds
+            - tivoli
+            - edirectory
+        type: str
+
+    username_ldap_attribute:
+        description:
+            - Name of the LDAP attribute to map to the Keycloak username
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ usernameLDAPAttribute, username_LDAP_attribute, usernameLdapAttribute ]
+
+    rdn_ldap_attribute:
+        description:
+            - Name of the LDAP attribute to use as top attribute
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ rdnLDAPAttribute, rdnLdapAttribute, rdn_LDAP_attribute ]
+
+    user_object_classes:
+        description:
+            - LDAP object class attributes for users
+            - Mandatory when creating the LDAP federation
+        type: list
+        aliases: userObjectClasses
+
+    connection_url:
+        description: 
+            - the url of the LDAP service
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ connectionUrl ]
+
+    users_dn:
+        description:
+            - Full DN of LDAP tree where users are
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ usersDn ]
+
+    bind_dn:
+        description:
+            - DN of LDAP admin
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ bindDn ]
+
+    bind_credential:
+        description:
+            - Password of LDAP admin
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ bindCredential ]
+
+    uuid_ldap_attribute:
+        description:
+            - Name of LDAP attribute which is used as unique object identifier
+            for object in LDAP
+            - Mandatory when creating the LDAP federation
+        type: str
+        aliases: [ uuidLDAPAttribute, uuidLdapAttribute, uuid_LDAP_attribute ]
+
+    edit_mode:
+        description:
+            - The behaviour of the Keycloak with the LDAP.
+        choices:
+            - READ_ONLY
+            - UNSYNCED
+            - WRITABLE
+        type: str
+        aliases: [ editMode ]
+
+    import_enable:
+        description:
+            - Whether to import the user from the LDAP into the Keycloak databases
+        type: bool
+        aliases: [ importEnable ]
+
+    synchronize_registrations:
+        description:
+            - Should new user in the Keycloak be created within the LDAP
+        type: bool
+        aliases: [ sync_registrations, synchronizeRegistrations, syncRegistrations ]
+
+    customer_user_ldap_filter:
+        description:
+            - Filter for searching user in the LDAP
+        type: str
+        aliases: [ customUserSearchFilter, custom_user_search_filter, customUserLdapFilter, customUserLDAPFilter, customUserLDAPFilter ]
+
+    search_scope:
+        description:
+            - Set how users are search, on one level or in all the subtree
+        type: str
+        choices:
+            - one level
+            - subtree
+        aliases: [ searchScope ]
+
+    use_trustore_spi:
+        description:
+            - Whether LDAP connection will use the trustore SPI with the trustore conifgure in the standalone.xml
+        type: str
+        choices:
+            - ldapsOnly
+            - always
+            - never
+        aliases: [ useTruststoreSpi ]
+
+    test_connection:
+        description:
+            - Check the connection to the LDAP server with a ping
+            - This parameter is mutually exclusive with test_authentication
+        type: bool
+        aliases: [ testConnection ]
+
+    test_authentication:
+        description:
+            - Check the connection to the LDAP server with the admin credentials
+            - This parameter is mutually exclusive with test_connection
+        type: bool
+        aliases: [ testAuthentication ]
+
+notes:
+    - The following parameters existing in the UI are not taken into account in this module, I(importUser), I(validatePasswordPolicy), I(connectionPooling) (and all associated parameters), I(connectionTimeout), I(readTimeout), I(allowKerberosAuthentication) (and all associated parameters), I(useKerberosForPasswordAuthentication), I(batchSize), I(periodicFullSync), I(periodicChangedUserSync) and I(cachePolicy). 
+
+extends_documentation_fragment:
+    - keycloak
+
+author:
+    - Nicolas Duclert (@ndclt)
+'''
+
 EXAMPLES = r'''
 - name: Create a keycloak federation
   keycloak_ldap_federation:
@@ -37,6 +249,275 @@ EXAMPLES = r'''
     search_scope: subtree
     use_truststore_spi: never
     test_authentication: True
+'''
+
+RETURN = r'''
+msg:
+  description: Message as to what action was taken
+  returned: always
+  type: str
+  sample: "LDAP federation created."
+
+changed:
+  description: whether the state of the keycloak configuration change
+  returned: always
+  type: bool
+
+ldap_federation:
+  description: the LDAP federation representation empty if the asked federation is deleted or does not exist.
+  returned: always
+  type: dict
+  contains:
+    id:
+      description: UUID that identifies the LDAP federation
+      type: str
+      returned: on success
+      sample: de455375-6900-46a0-8d11-51554e1c3f18
+    name:
+      description: the name of the LDAP federation
+      type: str
+      returned: on success
+      sample: my-company-ldap
+    providerId:
+      description: the id of the federation, always ldap for this module
+      type: str
+      returned: on success
+      sample: ldap
+    providerType:
+      description: the type of the federation, always org.keycloak.storage.UserStorageProvider
+      type: str
+      returned: on success
+      sample: org.keycloak.storage.UserStorageProvider
+    parentId:
+      description: the parent of the federation
+      type: str
+      returned: on success
+      sample: master
+    config:
+      description: the configuration of the LDAP federation
+      type: dict:
+      returned: always
+      contains:
+        pagination:
+          description: whether the LDAP server supports pagination
+          type: bool
+          returned: on success
+          sample: true
+        fullSyncPeriod:
+          description: whether to periodic synchronize the Keycloak and the LDAP
+          type: int
+          returned: on success
+          sample: -1
+        usersDn:
+          description: Full DN of LDAP tree where users are
+          type: str
+          returned: always
+          sample: ou=People, dc=MyCompany
+        connectionPooling:
+          description: whether to use connection pooling for accessing the LDAP server
+          type: bool
+          returned: on success
+          sample: true
+        cachePolicy:
+          description: cache policy for storage provider
+          type: str
+          returned: on success
+          sample: DEFAULT
+        useKerberosForPasswordAuthentication:
+          description: whether to use Kerberos for password authentication
+          type: bool
+          returned: on success
+          sample: false
+        importEnabled:
+          description: whether to save the LDAP users in the Keycloak database
+          type: bool
+          returned: on success
+          sample: false
+        enabled:
+          description: whether to enable the LDAP federation
+          type: bool
+          returned: always
+          sample: false
+        bindCredential:
+          description: the admin password 
+          type: str
+          returned: on success
+          sample: admin_password
+        changedSyncPeriod:
+          description: whether periodic synchronization of new or changed users should be enable
+          type: int
+          returned: on success
+          sample: -1
+        bindDn:
+          description: DN of LDAP admin
+          type: str
+          returned: on success
+          sample: cn=admindc=Metrondc=io
+        usernameLDAPAttribute:
+          description: Name of the LDAP attribute to map to the Keycloak username
+          type: str
+          returned: on success
+          sample: uuid
+        vendor:
+          description: LDAP provider
+          type: str
+          returned: on success
+          sample: other
+        uuidLDAPAttribute:
+          description: Name of LDAP attribute which is used as unique object identifier for object in LDAP
+          type: str
+          returned: on success
+          sample: entryUUID
+        allowKerberosAuthentication:
+          description: whether to allow Kerberos authentication
+          type: bool
+          returned: on success
+          sample: false
+        connectionUrl:
+          description: the url of the LDAP service
+          type: str
+          returned: on success
+          sample: ldap://openldap
+        syncRegistrations:
+          description: Whether new user created in the Keycloak should be created within the LDAP
+          type: bool
+          returned: on success
+          sample: true
+        authType:
+          description: LDAP authentication type (simple or none)
+          type: str
+          returned: on success
+          sample: simple
+        debug:
+          description: whether the debug mode is activated
+          type: bool
+          returned: on success
+          sample: false
+        searchScope:
+          description: Set how users are search, on one level (1) or in all the subtree (2)
+          type: int
+          returned: on success
+          sample: 1
+        useTruststoreSpi:
+          description: Whether LDAP connection will use the trustore SPI with the trustore conifgure in the standalone.xml
+          type: str
+          returned: on success
+          sample: ldapsOnly
+        priority:
+          description: priority of the provider when doing an user lookup (lowest first) 
+          type: int
+          returned: on success
+          sample: 0
+        userObjectClasses:
+          description: LDAP object class attributes for users
+          type: str
+          returned: on success
+          sample: inetOrgPerson, organizationalPerson
+        rdnLDAPAttribute:
+          description: Name of the LDAP attribute to use as top attribute
+          type: str
+          returned: on success
+          sample: entryUUID
+        editMode:
+          description: The behaviour of the Keycloak with the LDAP.
+          type: str
+          returned: on success
+          sample: READ_ONLY
+        validatePasswordPolicy:
+          description: whether Keycloak should validate the password with the realm password policy before updating it
+          type: bool
+          returned: on success
+          sample: false
+        batchSizeForSync:
+          description: Count of LDAP users to be imported from the LDAP to Keycoak within single transaction
+          type: int
+          returned: on success
+          sample: 1000
+        evictionDay:
+          description: Day of the week the entry will become invalid on (1 is Sunday)
+          type: int
+          returned: on success
+          sample: 1 
+        evictionHour:
+          description: Hour of the week the entry will become invalid on
+          type: int
+          returned: on success
+          sample: 2
+        evictionMinute:
+          description: Minute of the week the entry will become invalid on
+          type: int
+          returned: on success
+          sample: 20
+        maxLifespan:
+          description: Max lifespan of cache entry in millisecond
+          type: int
+          returned: on success
+          sample: 1000
+        customUserSearchFilter:
+          description: Filter for searching user in the LDAP
+          type: str
+          returned: on success
+          sample: 
+        connectionPoolingAuthentication:
+          description: Authentication type that may be pooled
+          type: str
+          returned: on success
+          sample: simple
+        connectionPoolingDebug:
+          description: The level of debug output to produce
+          type: int
+          returned: on success
+          sample: fine
+        connectionPoolingInitSize:
+          description: the number of connection per connection indentity to create when initialy createing a connection for the identity
+          type: str
+          returned: on success
+          sample: "2"
+        connectionPoolingMaxSize:
+          description: the maximum number of connection per connection indentity that can be maintained concurrently
+          type: str
+          returned: on success
+          sample: 1000
+        connectionPoolingPrefSize:
+          description: the maximum number of connection per connection indentity that should be maintained concurrently
+          type: str
+          returned: on success
+          sample: 5
+        connectionPoolingProtocol:
+          description: Protocol types of connection that may be pooled (plain or ssl)
+          type: str
+          returned: on success
+          sample: plain ssl
+        connectionPoolingTimeout:
+          description: the number of milliseconds that an idle connection may remain in the pool without being closed and removed from the pool
+          type: str
+          returned: on success
+          sample:  1000
+        connectionTimeout:
+          description: LDAP connection timeout in milliseconds
+          type: str
+          returned: on success
+          sample: 1000
+        readTimeout:
+          description: LDAP timeout in milliseconds for read operations
+          type: str
+          returned: on success
+          sample: 1000
+        serverPrincipal:
+          description: Full name of Kerberos server principal for hhtp service including serv and domain name.
+          type: str
+          returned: on success
+          sample: HTTP/host.foo.org@FOO.ORG
+        keyTab:
+          description: Location of Kerberos keytab file containing the credentials of server principal
+          type: str
+          returned: on success
+          sample: /etc/krb5.keytab
+        kerberosRealm:
+          description: Name of Kerberos realm
+          type: str
+          returned: on success
+          sample: FOO.ORG
 '''
 
 import json
