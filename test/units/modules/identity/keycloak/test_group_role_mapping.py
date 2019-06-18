@@ -56,12 +56,6 @@ def get_response(object_with_future_response, method, get_id_call_count):
     return object_with_future_response
 
 
-def raise_404(url):
-    def _raise_404():
-        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
-    return _raise_404
-
-
 CONNECTION_DICT = {
     'http://keycloak.url/auth/realms/master/protocol/openid-connect/token': create_wrapper(
         '{"access_token": "a long token"}'),
