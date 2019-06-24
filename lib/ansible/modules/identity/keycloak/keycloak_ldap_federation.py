@@ -234,10 +234,11 @@ EXAMPLES = r'''
     auth_username: USERNAME
     auth_password: PASSWORD
     realm: master
-    name: my-company-ldap
+    federation_id: my-company-ldap
+    vendor: other
     state: present
     edit_mode: WRITABLE
-    synchronize_registrations: True,
+    synchronize_registrations: true
     username_ldap_attribute: cn
     rdn_ldap_attribute: cn
     user_object_classes: inetOrgPerson, organizationalPerson
