@@ -46,7 +46,7 @@ options:
   
   realm:
     description:
-      - The realm where the role, group and optionaly client are.
+      - The realm where the user and group and are.
     type: str
     default: master
 
@@ -95,7 +95,7 @@ EXAMPLES = r'''
     auth_password: PASSWORD
     realm: master
     group_name: one_group
-    keycloak_username: one_role
+    keycloak_username: one_user
 - name delete the mapping if it exists
   keycloak_link_user_to_group:
     auth_client_id: admin-cli
