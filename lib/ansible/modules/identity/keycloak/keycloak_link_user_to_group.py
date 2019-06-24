@@ -210,7 +210,6 @@ class KeycloakLinkUserToGroup(object):
             module=self.module,
             description='groups of user',
         )
-        print(group_response)
         self._user_groups_id = [one_group['id'] for one_group in group_response]
 
     def are_user_and_group_linked(self):
