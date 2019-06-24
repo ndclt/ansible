@@ -684,7 +684,7 @@ class LdapFederation(object):
             )
         except Exception as e:
             self.module.fail_json(
-                msg='Could not create federation %s in realm %s: %s'
+                msg='Could not update federation %s in realm %s: %s'
                 % (self.given_id, self.module.params.get('realm'), str(e))
             )
         return self._clean_payload(federation_payload)
