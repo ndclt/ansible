@@ -561,3 +561,35 @@ def test_state_present_should_update_existing_federation_with_connect_check(
         send_data = one_call.kwargs['data']
         assert urlencode({'bindCredential': 'new_admin_password'}) in send_data
         assert urlencode({'bindDn': 'cn:admin'}) in send_data
+
+
+def test_sync_does_not_work(monkeypatch):
+    monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_client_id': 'admin-cli',
+        'auth_keycloak_url': 'http://localhost:8080/auth',
+        'auth_realm': 'master',
+        'auth_username': 'admin',
+        'auth_password': 'admin',
+        'realm': 'master',
+        'federation_id': 'my-company-ldap',
+        'state': 'present',
+        'edit_mode': 'WRITABLE',
+        'synchronize_registrations': True,
+        'username_ldap_attribute': 'cn',
+        'rdn_ldap_attribute': 'cn',
+        'user_object_classes': 'inetOrgPerson, organizationalPerson',
+        'connection_url': 'ldap://openldap',
+        'users_dn': 'ou=People,dc=my-company',
+        'bind_dn': 'cn=admin,dc=Metron,dc=io',
+        'bind_credential': 'admin',
+        'uuid_ldap_attribute': 'entryUUID',
+        'search_scope': 'subtree',
+        'use_truststore_spi': 'never',
+        'test_authentication': 'True',
+        'vendor': 'other',
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson):
+        keycloak_ldap_federation.run_module()

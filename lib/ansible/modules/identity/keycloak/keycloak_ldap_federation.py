@@ -829,6 +829,7 @@ class LdapFederation(object):
         :rtype: dict
         """
         translation = {'federation_id': 'name', 'federation_uuid': 'id'}
+        config_translation = {'synchronize_registrations': 'syncRegistrations'}
         config = {}
         payload = {
             'providerId': 'ldap',
@@ -843,13 +844,15 @@ class LdapFederation(object):
                 if key in list(translation.keys()):
                     payload.update({translation[key]: value})
                 else:
-                    if key == 'search_scope':
+                    if key in config_translation:
+                        config.update({config_translation[key]: [str(value).lower()]})
+                    elif key == 'search_scope':
                         config.update({camel(key): [SEARCH_SCOPE[value]]})
                     elif key == 'user_object_classes':
                         value.sort()
                         config.update({camel(key): [', '.join(value)]})
                     else:
-                        config.update({camel(key).replace('Ldap', 'LDAP'): [value]})
+                        config.update({camel(key).replace('Ldap', 'LDAP'): [str(value)]})
         try:
             config['priority']
         except KeyError:
