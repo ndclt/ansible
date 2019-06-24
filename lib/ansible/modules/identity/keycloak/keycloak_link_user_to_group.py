@@ -138,6 +138,7 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     delete_on_url,
 )
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils._text import to_text
 
 
 LIST_GROUP_OF_USER_URL = '{url}/admin/realms/{realm}/users/{id}/groups'
@@ -308,21 +309,21 @@ def run_module():
     result = {}
 
     if not link_user_to_group.are_user_and_group_linked() and state == 'absent':
-        result['msg'] = (
+        result['msg'] = to_text((
             'Link between user {given_user_id} and group {given_group_id} does not exist, nothing to do.'
         ).format(
             given_group_id=link_user_to_group.given_group,
             given_user_id=link_user_to_group.given_user,
-        )
+        ))
         result['changed'] = False
         result['link_user_to_group'] = {}
     elif link_user_to_group.are_user_and_group_linked() and state == 'present':
-        result['msg'] = (
+        result['msg'] = to_text((
             'Link between user {given_user_id} and group {given_group_id} exists, nothing to do.'
         ).format(
             given_group_id=link_user_to_group.given_group,
             given_user_id=link_user_to_group.given_user,
-        )
+        ))
         result['changed'] = False
         result['link_user_to_group'] = link_user_to_group.get_link_representation()
     elif not link_user_to_group.are_user_and_group_linked() and state == 'present':
@@ -333,12 +334,12 @@ def run_module():
             result['changed'] = False
 
         result['link_user_to_group'] = link_user_to_group.get_link_representation()
-        result['msg'] = (
+        result['msg'] = to_text((
             'Link between user {given_user_id} and group {given_group_id} created.'
         ).format(
             given_group_id=link_user_to_group.given_group,
             given_user_id=link_user_to_group.given_user,
-        )
+        ))
     elif link_user_to_group.are_user_and_group_linked() and state == 'absent':
         if not module.check_mode:
             result['changed'] = True
@@ -346,12 +347,12 @@ def run_module():
         else:
             result['changed'] = False
         result['link_user_to_group'] = {}
-        result['msg'] = (
+        result['msg'] = to_text((
             'Link between user {given_user_id} and group {given_group_id} deleted.'
         ).format(
             given_group_id=link_user_to_group.given_group,
             given_user_id=link_user_to_group.given_user,
-        )
+        ))
     module.exit_json(**result)
 
 
