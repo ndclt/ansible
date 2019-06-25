@@ -563,33 +563,31 @@ def test_state_present_should_update_existing_federation_with_connect_check(
         assert urlencode({'bindDn': 'cn:admin'}) in send_data
 
 
-def test_sync_does_not_work(monkeypatch):
+def test_create_payload_for_synchronization(monkeypatch, mock_get_token, mock_update_url):
+    """When updating the sync registration of a federation, the payload needs
+    to have some keys. If not, the response is 204 put the sync registration
+    parameter is not updated."""
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_client_id': 'admin-cli',
-        'auth_keycloak_url': 'http://localhost:8080/auth',
+        'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_realm': 'master',
-        'auth_username': 'admin',
-        'auth_password': 'admin',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
         'realm': 'master',
-        'federation_id': 'my-company-ldap',
+        'federation_id': 'company-ldap',
         'state': 'present',
-        'edit_mode': 'WRITABLE',
         'synchronize_registrations': True,
-        'username_ldap_attribute': 'cn',
-        'rdn_ldap_attribute': 'cn',
-        'user_object_classes': 'inetOrgPerson, organizationalPerson',
-        'connection_url': 'ldap://openldap',
-        'users_dn': 'ou=People,dc=my-company',
-        'bind_dn': 'cn=admin,dc=Metron,dc=io',
-        'bind_credential': 'admin',
-        'uuid_ldap_attribute': 'entryUUID',
-        'search_scope': 'subtree',
-        'use_truststore_spi': 'never',
-        'test_authentication': 'True',
-        'vendor': 'other',
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson):
         keycloak_ldap_federation.run_module()
+    put_call = mock_update_url.mock_calls[1]
+    pushed_data = json.loads(put_call[2]['data'])
+    config = pushed_data.pop('config')
+    all_config_keys = list(config.keys())
+    mandatory_keys_for_sync = [
+        'batchSizeForSync', 'fullSyncPeriod', 'changedSyncPeriod', 'evictionDay', 'evictionHour', 'evictionMinute', 'maxLifespan', 'customUserSearchFilter']
+    for one_key in mandatory_keys_for_sync:
+        assert one_key in all_config_keys
