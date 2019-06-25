@@ -276,6 +276,11 @@ def test_state_present_should_create_absent_federation(
             'usersDn': 'ou=People,dc=my-company',
             'uuidLDAPAttribute': 'entryUUID',
             'vendor': 'other',
+            'cachePolicy': 'DEFAULT',
+            'evictionDay': None,
+            'evictionHour': None,
+            'evictionMinute': None,
+            'maxLifespan': None,
         },
         'name': 'company-ldap',
         'providerId': 'ldap',
@@ -288,6 +293,8 @@ def test_state_present_should_create_absent_federation(
     for key, value in config.items():
         if key == 'bindCredential':
             send_config.update({'bindCredential': ['ldap_admin_password']})
+        elif value is None:
+            send_config.update({key: []})
         else:
             send_config.update({key: [value]})
     reference_result.update({'config': send_config})
@@ -496,6 +503,7 @@ def mock_update_url(mocker):
                             'customUserSearchFilter': [],
                             'syncRegistrations': [False],
                             'priority': [3],
+                            'cachePolicy': ['DEFAULT'],
                         },
                     }
                 ]
@@ -548,6 +556,7 @@ def test_state_present_should_update_existing_federation(
             'priority': 3,
             'uuidLDAPAttribute': 'newEntryUUID',
             'connectionPooling': False,
+            'cachePolicy': 'DEFAULT',
         },
         'name': 'company-ldap',
         'providerId': 'ldap',
