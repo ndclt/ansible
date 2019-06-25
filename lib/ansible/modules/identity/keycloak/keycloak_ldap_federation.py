@@ -215,6 +215,26 @@ options:
         type: bool
         aliases: [ testAuthentication ]
 
+  batch_size_for_synchronization:
+    description:
+      - Count of LDAP users to be imported from LDAP to Keycloak within single transaction
+    type: int
+    aliases: [ batch_size_for_sync, batchSizeForSynchronization, batchSizeForSync ]
+
+  full_synchronization_period:
+    description:
+      - Period for full synchronisation in seconds
+      - If this number is under 1, the automatic synchronization would be disable
+    type: int
+    aliases: [ full_sync_period, fullSynchronizationPeriod, fullSyncPeriod ]
+
+  changed_user_synchronization_period:
+    description:
+      - Period for changed or newly created users synchronization in seconds
+      - If this number is under 1, the automatic synchronization would be disable
+    type: int
+    aliases: [ changedUserSyncPeriod, changedUserSynchronizationPeriod, changed_user_sync_period ]
+
 notes:
     - The following parameters existing in the UI are not taken into account in this module, I(importUser), I(validatePasswordPolicy), I(connectionPooling) (and all associated parameters), I(connectionTimeout), I(readTimeout), I(allowKerberosAuthentication) (and all associated parameters), I(useKerberosForPasswordAuthentication), I(batchSize), I(periodicFullSync), I(periodicChangedUserSync) and I(cachePolicy). 
 
@@ -344,7 +364,7 @@ ldap_federation:
           type: str
           returned: on success
           sample: admin_password
-        changedSyncPeriod:
+        changedUserSyncPeriod:
           description: whether periodic synchronization of new or changed users should be enable
           type: int
           returned: on success
@@ -865,22 +885,36 @@ class LdapFederation(object):
         except KeyError:
             old_configuration = {}
         new_configuration = dict_merge(old_configuration, config)
-        try:
-            new_configuration['priority']
-        except KeyError:
-            new_configuration.update({'priority': [0]})
-        # yet I don't need connection pooling to True but this key is mandatory.
-        try:
-            new_configuration['connectionPooling']
-        except KeyError:
-            new_configuration.update({'connectionPooling': [False]})
-        # check the presence of following keys:
-        # - cachePolicy (default value: ['DEFAULT'])
-        # - evictionDay: []
-        # - evictionHour: []
-        # - evictionMinute: []
-        # - max_lifespan: []
-        payload.update({'config': new_configuration})
+        # Yet I don't need the following keys to have values but there are mandatory
+        # in the payload.
+        dict_of_default = {
+            'priority': 0,
+            'connectionPooling': False,
+            'cachePolicy': 'DEFAULT',
+            'evictionDay': None,
+            'evictionHour': None,
+            'evictionMinute': None,
+            'maxLifespan': None,
+        }
+        payload.update(
+            {
+                'config': self._if_absent_add_a_default_value(
+                    new_configuration, dict_of_default
+                )
+            }
+        )
+        return payload
+
+    @staticmethod
+    def _if_absent_add_a_default_value(payload, dict_of_default):
+        for key in dict_of_default:
+            try:
+                payload[key]
+            except KeyError:
+                if dict_of_default[key] is None:
+                    payload.update({key: []})
+                else:
+                    payload.update({key: [dict_of_default[key]]})
         return payload
 
     def get_result(self):
@@ -1033,16 +1067,14 @@ def run_module():
             type='int',
             aliases=['full_sync_period', 'fullSynchronizationPeriod', 'fullSyncPeriod'],
         ),
-        # in second -1, switch off to test
-        changed_synchronization_period=dict(
+        changed_user_synchronization_period=dict(
             type='int',
             aliases=[
-                'changedSyncPeriod',
-                'changedSynchronizationPeriod',
-                'changed_sync_period',
+                'changedUserSyncPeriod',
+                'changedUserSynchronizationPeriod',
+                'changed_user_sync_period',
             ],
         ),
-        # in second -1, switch off to test
     )
     # option not taken into account:
     # cache_policy=dict(type=str, choices=['DEFAULT', 'EVICT_DAILY', 'EVICT_WEEKLY', 'MAX_LIFESPAN'], aliases=['cachePolicy'])
