@@ -486,6 +486,15 @@ def mock_update_url(mocker):
                         'config': {
                             'pagination': [True],
                             'bindDn': ['cn:admin'],
+                            'batchSizeForSync': [1000],
+                            'fullSyncPeriod': [-1],
+                            'changedSyncPeriod': [-1],
+                            'evictionDay': [],
+                            'evictionHour': [],
+                            'evictionMinute': [],
+                            'maxLifespan': [],
+                            'customUserSearchFilter': [],
+                            'syncRegistrations': [False]
                         },
                     }
                 ]
@@ -591,3 +600,4 @@ def test_create_payload_for_synchronization(monkeypatch, mock_get_token, mock_up
         'batchSizeForSync', 'fullSyncPeriod', 'changedSyncPeriod', 'evictionDay', 'evictionHour', 'evictionMinute', 'maxLifespan', 'customUserSearchFilter']
     for one_key in mandatory_keys_for_sync:
         assert one_key in all_config_keys
+    assert config['syncRegistrations'] == [True]
