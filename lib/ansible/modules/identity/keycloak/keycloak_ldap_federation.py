@@ -574,8 +574,7 @@ class LdapFederation(object):
                 return USER_FEDERATION_URL.format(
                     url=self.module.params.get('auth_keycloak_url'),
                     realm=quote(self.module.params.get('realm')),
-                    federation_id=quote(
-                        self.module.params.get('federation_id')),
+                    federation_id=quote(self.module.params.get('federation_id')),
                 )
             return USER_FEDERATION_BY_UUID_URL.format(
                 url=self.module.params.get('auth_keycloak_url'),
@@ -607,20 +606,20 @@ class LdapFederation(object):
             else:
                 self.module.fail_json(
                     msg='Could not obtain user federation %s for realm %s: %s'
-                        % (to_text(self.given_id), to_text(realm), to_text(e))
+                    % (to_text(self.given_id), to_text(realm), to_text(e))
                 )
         except ValueError as e:
             self.module.fail_json(
                 msg=(
-                        'API returned incorrect JSON when trying to obtain user '
-                        'federation %s for realm %s: %s'
-                    )
-                    % (to_text(self.given_id), to_text(realm), to_text(e))
+                    'API returned incorrect JSON when trying to obtain user '
+                    'federation %s for realm %s: %s'
+                )
+                % (to_text(self.given_id), to_text(realm), to_text(e))
             )
         except Exception as e:
             self.module.fail_json(
                 msg='Could not obtain user federation %s for realm %s: %s'
-                    % (to_text(self.given_id), to_text(realm), to_text(e))
+                % (to_text(self.given_id), to_text(realm), to_text(e))
             )
         else:
             if json_federation:
@@ -654,7 +653,7 @@ class LdapFederation(object):
         except Exception as e:
             self.module.fail_json(
                 msg='Could not delete federation %s in realm %s: %s'
-                    % (self.given_id, self.module.params.get('realm'), str(e))
+                % (self.given_id, self.module.params.get('realm'), str(e))
             )
 
     def update(self):
@@ -685,7 +684,7 @@ class LdapFederation(object):
         except Exception as e:
             self.module.fail_json(
                 msg='Could not update federation %s in realm %s: %s'
-                    % (self.given_id, self.module.params.get('realm'), str(e))
+                % (self.given_id, self.module.params.get('realm'), str(e))
             )
         return self._clean_payload(federation_payload)
 
@@ -722,7 +721,7 @@ class LdapFederation(object):
         except Exception as e:
             self.module.fail_json(
                 msg='Could not create federation %s in realm %s: %s'
-                    % (self.given_id, self.module.params.get('realm'), str(e))
+                % (self.given_id, self.module.params.get('realm'), str(e))
             )
         return self._clean_payload(federation_payload)
 
@@ -731,7 +730,7 @@ class LdapFederation(object):
         if not self._call_test_url({'action': 'testConnection'}):
             self.module.fail_json(
                 msg='The url connection %s cannot be reached.'
-                    % (self.module.params.get('connection_url'))
+                % (self.module.params.get('connection_url'))
             )
 
     def _test_authentication(self):
@@ -739,11 +738,11 @@ class LdapFederation(object):
         if not self._call_test_url({'action': 'testAuthentication'}):
             self.module.fail_json(
                 msg='The user %s cannot logged in the ldap at %s, '
-                    'you should check your credentials.'
-                    % (
-                        self.module.params.get('bind_dn'),
-                        self.module.params.get('connection_url'),
-                    )
+                'you should check your credentials.'
+                % (
+                    self.module.params.get('bind_dn'),
+                    self.module.params.get('connection_url'),
+                )
             )
 
     def _call_test_url(self, extra_arguments):
@@ -781,8 +780,11 @@ class LdapFederation(object):
                     payload.update({camel(one_key): trust_store})
                 else:
                     payload.update(
-                        {camel(one_key): self.federation['config'].get(
-                            camel(one_key), '')}
+                        {
+                            camel(one_key): self.federation['config'].get(
+                                camel(one_key), ''
+                            )
+                        }
                     )
         payload.update(extra_arguments)
         test_url = TEST_LDAP_CONNECTION.format(
@@ -791,8 +793,7 @@ class LdapFederation(object):
         )
         headers = deepcopy(self.restheaders.header)
         headers.update(
-            {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
+            {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
         )
         try:
             open_url(
@@ -807,13 +808,12 @@ class LdapFederation(object):
                 return False
             self.module.fail_json(
                 msg='Could not test connection %s in realm %s: %s'
-                    % (self.given_id, self.module.params.get('realm'),
-                       str(http_error))
+                % (self.given_id, self.module.params.get('realm'), str(http_error))
             )
         except Exception as e:
             self.module.fail_json(
                 msg='Could not test connection %s in realm %s: %s'
-                    % (self.given_id, self.module.params.get('realm'), str(e))
+                % (self.given_id, self.module.params.get('realm'), str(e))
             )
         return True
 
@@ -856,10 +856,12 @@ class LdapFederation(object):
                         config.update({camel(key): [', '.join(value)]})
                     else:
                         config.update(
-                            {camel(key).replace('Ldap', 'LDAP'): [str(value)]})
+                            {camel(key).replace('Ldap', 'LDAP'): [str(value)]}
+                        )
         try:
-            old_configuration = {key: [value] for key, value in
-                                 self.federation['config'].items()}
+            old_configuration = {
+                key: [value] for key, value in self.federation['config'].items()
+            }
         except KeyError:
             old_configuration = {}
         new_configuration = dict_merge(old_configuration, config)
@@ -943,8 +945,7 @@ class LdapFederation(object):
         if len(missing_element) > 1:
             missing_element.sort()
             elements_for_message = ', '.join(missing_element[:-1])
-            elements_for_message += ' and {} are missing'.format(
-                missing_element[-1])
+            elements_for_message += ' and {} are missing'.format(missing_element[-1])
         else:
             elements_for_message = missing_element[0] + 'is missing'
         elements_for_message += ' for the federation creation.'
@@ -954,8 +955,7 @@ class LdapFederation(object):
 def run_module():
     argument_spec = keycloak_argument_spec()
     meta_args = dict(
-        state=dict(type='str', default='present',
-                   choices=['present', 'absent']),
+        state=dict(type='str', default='present', choices=['present', 'absent']),
         realm=dict(type='str', default='master'),
         federation_id=dict(type='str', aliases=['federerationId']),
         federation_uuid=dict(type='str', aliases=['federationUuid']),
@@ -980,8 +980,7 @@ def run_module():
         ),
         rdn_ldap_attribute=dict(
             type='str',
-            aliases=['rdnLDAPAttribute', 'rdnLdapAttribute',
-                     'rdn_LDAP_attribute'],
+            aliases=['rdnLDAPAttribute', 'rdnLdapAttribute', 'rdn_LDAP_attribute'],
         ),
         user_object_classes=dict(
             type='list', elements='str', aliases=['userObjectClasses']
@@ -989,8 +988,7 @@ def run_module():
         connection_url=dict(type='str', aliases=['connectionUrl']),
         users_dn=dict(type='str', aliases=['usersDn']),
         bind_dn=dict(type='str', aliases=['bindDn']),
-        bind_credential=dict(type='str', aliases=['bindCredential'],
-                             no_log=True),
+        bind_credential=dict(type='str', aliases=['bindCredential'], no_log=True),
         custom_user_ldap_filter=dict(
             type='str',
             aliases=[
@@ -1003,12 +1001,10 @@ def run_module():
         ),
         uuid_ldap_attribute=dict(
             type='str',
-            aliases=['uuidLDAPAttribute', 'uuidLdapAttribute',
-                     'uuid_LDAP_attribute'],
+            aliases=['uuidLDAPAttribute', 'uuidLdapAttribute', 'uuid_LDAP_attribute'],
         ),
         search_scope=dict(
-            type='str', choices=['one level', 'subtree'],
-            aliases=['searchScope']
+            type='str', choices=['one level', 'subtree'], aliases=['searchScope']
         ),
         use_truststore_spi=dict(
             type='str',
@@ -1025,22 +1021,27 @@ def run_module():
                 'syncRegistrations',
             ],
         ),
-        batch_size_for_synchronization=dict(type='int',
-                                            aliases=['batch_size_for_sync',
-                                                     'batchSizeForSynchronization',
-                                                     'batchSizeForSync'],
-                                            ),
-        full_synchronization_period=dict(type='int',
-                                         aliases=['full_sync_period',
-                                                  'fullSynchronizationPeriod',
-                                                  'fullSyncPeriod'],
-                                         ),
+        batch_size_for_synchronization=dict(
+            type='int',
+            aliases=[
+                'batch_size_for_sync',
+                'batchSizeForSynchronization',
+                'batchSizeForSync',
+            ],
+        ),
+        full_synchronization_period=dict(
+            type='int',
+            aliases=['full_sync_period', 'fullSynchronizationPeriod', 'fullSyncPeriod'],
+        ),
         # in second -1, switch off to test
-        changed_synchronization_period=dict(type='int',
-                                            aliases=['changedSyncPeriod',
-                                                     'changedSynchronizationPeriod',
-                                                     'changed_sync_period'],
-                                            ),
+        changed_synchronization_period=dict(
+            type='int',
+            aliases=[
+                'changedSyncPeriod',
+                'changedSynchronizationPeriod',
+                'changed_sync_period',
+            ],
+        ),
         # in second -1, switch off to test
     )
     # option not taken into account:
