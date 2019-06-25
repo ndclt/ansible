@@ -269,7 +269,7 @@ def test_state_present_should_create_absent_federation(
             'priority': 0,
             'rdnLDAPAttribute': 'cn',
             'searchScope': 2,
-            'synchronizeRegistrations': True,
+            'syncRegistrations': True,
             'useTruststoreSpi': 'never',
             'userObjectClasses': 'inetOrgPerson, organizationalPerson',
             'usernameLDAPAttribute': 'cn',
@@ -292,7 +292,7 @@ def test_state_present_should_create_absent_federation(
             send_config.update({key: [value]})
     reference_result.update({'config': send_config})
     create_call = mock_create_url.mock_calls[1]
-    send_json = json.loads(create_call.kwargs['data'])
+    send_json = json.loads(create_call[2]['data'])
     diff_result = recursive_diff(send_json, reference_result)
     assert not diff_result
 
@@ -494,7 +494,8 @@ def mock_update_url(mocker):
                             'evictionMinute': [],
                             'maxLifespan': [],
                             'customUserSearchFilter': [],
-                            'syncRegistrations': [False]
+                            'syncRegistrations': [False],
+                            'priority': [3],
                         },
                     }
                 ]
@@ -533,8 +534,19 @@ def test_state_present_should_update_existing_federation(
     assert ansible_exit_json['changed']
     reference_result = {
         'config': {
+            'pagination': True,
+            'bindDn': 'cn:admin',
+            'batchSizeForSync': 1000,
+            'fullSyncPeriod': -1,
+            'changedSyncPeriod': -1,
+            'evictionDay': None,
+            'evictionHour': None,
+            'evictionMinute': None,
+            'maxLifespan': None,
+            'customUserSearchFilter': None,
+            'syncRegistrations': False,
+            'priority': 3,
             'uuidLDAPAttribute': 'newEntryUUID',
-            'priority': 0,
             'connectionPooling': False,
         },
         'name': 'company-ldap',
@@ -601,3 +613,4 @@ def test_create_payload_for_synchronization(monkeypatch, mock_get_token, mock_up
     for one_key in mandatory_keys_for_sync:
         assert one_key in all_config_keys
     assert config['syncRegistrations'] == [True]
+    assert config['priority'] == [3]
