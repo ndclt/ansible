@@ -529,6 +529,7 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     keycloak_argument_spec,
     KeycloakAuthorizationHeader,
 )
+from ansible.module_utils.common.dict_transformations import dict_merge
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import open_url
 from ansible.module_utils.six.moves.urllib.parse import quote, urlencode
@@ -854,22 +855,20 @@ class LdapFederation(object):
                     else:
                         config.update({camel(key).replace('Ldap', 'LDAP'): [str(value)]})
         try:
-            config['priority']
+            old_configuration = {key: [value] for key, value in self.federation['config'].items()}
         except KeyError:
-            config.update({'priority': [0]})
+            old_configuration = {}
+        new_configuration = dict_merge(old_configuration, config)
+        try:
+            new_configuration['priority']
+        except KeyError:
+            new_configuration.update({'priority': [0]})
         # yet I don't need connection pooling to True but this key is mandatory.
-        config.update({
-            'batchSizeForSync': [],  # [1000],
-            'fullSyncPeriod': [],  # [-1],
-            'changedSyncPeriod': [],  # [-1],
-            'evictionDay': [],
-            'evictionHour': [],
-            'evictionMinute': [],
-            'maxLifespan': [],
-            'customUserSearchFilter': [],
-        })
-        config.update({'connectionPooling': [False]})
-        payload.update({'config': config})
+        try:
+            new_configuration['connectionPooling']
+        except KeyError:
+            new_configuration.update({'connectionPooling': [False]})
+        payload.update({'config': new_configuration})
         return payload
 
     def get_result(self):
