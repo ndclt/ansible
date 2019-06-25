@@ -845,7 +845,7 @@ class LdapFederation(object):
                     payload.update({translation[key]: value})
                 else:
                     if key in config_translation:
-                        config.update({config_translation[key]: [str(value).lower()]})
+                        config.update({config_translation[key]: [value]})
                     elif key == 'search_scope':
                         config.update({camel(key): [SEARCH_SCOPE[value]]})
                     elif key == 'user_object_classes':
@@ -858,6 +858,16 @@ class LdapFederation(object):
         except KeyError:
             config.update({'priority': [0]})
         # yet I don't need connection pooling to True but this key is mandatory.
+        config.update({
+            'batchSizeForSync': [],  # [1000],
+            'fullSyncPeriod': [],  # [-1],
+            'changedSyncPeriod': [],  # [-1],
+            'evictionDay': [],
+            'evictionHour': [],
+            'evictionMinute': [],
+            'maxLifespan': [],
+            'customUserSearchFilter': [],
+        })
         config.update({'connectionPooling': [False]})
         payload.update({'config': config})
         return payload
@@ -887,7 +897,10 @@ class LdapFederation(object):
             if key == 'bindCredential' and credential_clean:
                 new_config.update({key: 'no_log'})
             else:
-                new_config.update({key: value[0]})
+                try:
+                    new_config.update({key: value[0]})
+                except IndexError:
+                    new_config.update({key: None})
 
         clean_payload.update({'config': new_config})
         return clean_payload
