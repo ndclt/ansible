@@ -20,200 +20,200 @@ module: keycloak_ldap_federation
 short_description: Allows administration of Keycloak LDAP federation via Keycloak API
 
 description:
-    - This module allows  you to add, remove or modify Keycloak LDAP federation via the Keycloak API.
-      It requires access to the REST API via OpenID Connect; the user connecting and the client being
-      used must have the requisite access rights. In a default Keycloak installation, admin-cli
-      and an admin user would work, as would a separate client definition with the scope tailored
-      to your needs and a user having the expected roles.
-    
-    - The names of module options are snake_cased versions of the camelCase ones found in the
-      Keycloak API and its documentation at U(http://www.keycloak.org/docs-api/3.3/rest-api/). 
+  - This module allows  you to add, remove or modify Keycloak LDAP federation via the Keycloak API.
+    It requires access to the REST API via OpenID Connect; the user connecting and the client being
+    used must have the requisite access rights. In a default Keycloak installation, admin-cli
+    and an admin user would work, as would a separate client definition with the scope tailored
+    to your needs and a user having the expected roles.
 
-    - At creation and update, this module allows you to test the connection or the authentication 
-      to the LDAP service from the given arguments. If the connection or the authentication does
-      not work, the module fails.
+  - The names of module options are snake_cased versions of the camelCase ones found in the
+    Keycloak API and its documentation at U(http://www.keycloak.org/docs-api/3.3/rest-api/).
 
-    - When updating a LDAP federation, where possible provide the group ID to the module. 
-      This removes a lookup to the API to translate the name into the group ID.
+  - At creation and update, this module allows you to test the connection or the authentication
+    to the LDAP service from the given arguments. If the connection or the authentication does
+    not work, the module fails.
+
+  - When updating a LDAP federation, where possible provide the group ID to the module.
+    This removes a lookup to the API to translate the name into the group ID.
 
 version_added: "2.9"
 
 options:
-    state:
-        description:
-            - State of the LDAP federation.
-            - On C(present), the group will be created if it does not yet exist, or updated with the parameters you provide.
-            - On C(absent), the group will be removed if it exists.
-        required: true
-        default: present
-        type: str
-        choices:
-            - present
-            - absent
+  state:
+    description:
+      - State of the LDAP federation.
+      - On C(present), the group will be created if it does not yet exist, or updated with the parameters you provide.
+      - On C(absent), the group will be removed if it exists.
+    required: true
+    default: present
+    type: str
+    choices:
+      - present
+      - absent
 
-    realm:
-        type: str
-        description:
-            - They Keycloak realm under which this LDAP federation resides.
-        default: 'master'
+  realm:
+    type: str
+    description:
+      - They Keycloak realm under which this LDAP federation resides.
+    default: 'master'
 
-    federation_id:
-        description:
-            - The name of the federation
-            - Also called ID of the federationin the table of federations or
-              the console display name in the detailed view of a federation
-            - This parameter is mutually exclusive with federation_uuid and one
-              of them is required by the module
-        type: str
-        aliases: [ federerationId ] 
+  federation_id:
+    description:
+      - The name of the federation
+      - Also called ID of the federationin the table of federations or
+        the console display name in the detailed view of a federation
+      - This parameter is mutually exclusive with federation_uuid and one
+        of them is required by the module
+    type: str
+    aliases: [ federerationId ]
 
-    federation_uuid:
-        description:
-            - The uuid of the federation
-            - This parameter is mutually exclusive with federation_id and one
-              of them is required by the module
-        type: str
-        aliases: [ federationUuid ]
+  federation_uuid:
+    description:
+      - The uuid of the federation
+      - This parameter is mutually exclusive with federation_id and one
+        of them is required by the module
+    type: str
+    aliases: [ federationUuid ]
 
-    enable:
-        description:
-            - whether the federation will be enable
-        type: bool
+  enable:
+    description:
+      - whether the federation will be enable
+    type: bool
 
-    pagination:
-        description:
-            - Does the LDAP server supports pagination.
-        type: bool
+  pagination:
+    description:
+      - Does the LDAP server supports pagination.
+    type: bool
 
-    vendor:
-        description:
-            - LDAP provider
-            - Mandatory when creating the LDAP federation
-        choices:
-            - other
-            - ad
-            - rhds
-            - tivoli
-            - edirectory
-        type: str
+  vendor:
+    description:
+      - LDAP provider
+      - Mandatory when creating the LDAP federation
+    choices:
+      - other
+      - ad
+      - rhds
+      - tivoli
+      - edirectory
+    type: str
 
-    username_ldap_attribute:
-        description:
-            - Name of the LDAP attribute to map to the Keycloak username
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ usernameLDAPAttribute, username_LDAP_attribute, usernameLdapAttribute ]
+  username_ldap_attribute:
+    description:
+      - Name of the LDAP attribute to map to the Keycloak username
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ usernameLDAPAttribute, username_LDAP_attribute, usernameLdapAttribute ]
 
-    rdn_ldap_attribute:
-        description:
-            - Name of the LDAP attribute to use as top attribute
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ rdnLDAPAttribute, rdnLdapAttribute, rdn_LDAP_attribute ]
+  rdn_ldap_attribute:
+    description:
+      - Name of the LDAP attribute to use as top attribute
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ rdnLDAPAttribute, rdnLdapAttribute, rdn_LDAP_attribute ]
 
-    user_object_classes:
-        description:
-            - LDAP object class attributes for users
-            - Mandatory when creating the LDAP federation
-        type: list
-        aliases: userObjectClasses
+  user_object_classes:
+    description:
+      - LDAP object class attributes for users
+      - Mandatory when creating the LDAP federation
+    type: list
+    aliases: userObjectClasses
 
-    connection_url:
-        description: 
-            - the url of the LDAP service
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ connectionUrl ]
+  connection_url:
+    description:
+      - the url of the LDAP service
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ connectionUrl ]
 
-    users_dn:
-        description:
-            - Full DN of LDAP tree where users are
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ usersDn ]
+  users_dn:
+    description:
+      - Full DN of LDAP tree where users are
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ usersDn ]
 
-    bind_dn:
-        description:
-            - DN of LDAP admin
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ bindDn ]
+  bind_dn:
+    description:
+      - DN of LDAP admin
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ bindDn ]
 
-    bind_credential:
-        description:
-            - Password of LDAP admin
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ bindCredential ]
+  uuid_ldap_attribute:
+    description:
+      - Name of LDAP attribute which is used as unique object identifier
+        for object in LDAP
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ uuidLDAPAttribute, uuidLdapAttribute, uuid_LDAP_attribute ]
 
-    uuid_ldap_attribute:
-        description:
-            - Name of LDAP attribute which is used as unique object identifier
-            for object in LDAP
-            - Mandatory when creating the LDAP federation
-        type: str
-        aliases: [ uuidLDAPAttribute, uuidLdapAttribute, uuid_LDAP_attribute ]
+  bind_credential:
+    description:
+      - Password of LDAP admin
+      - Mandatory when creating the LDAP federation
+    type: str
+    aliases: [ bindCredential ]
 
-    edit_mode:
-        description:
-            - The behaviour of the Keycloak with the LDAP.
-        choices:
-            - READ_ONLY
-            - UNSYNCED
-            - WRITABLE
-        type: str
-        aliases: [ editMode ]
+  edit_mode:
+    description:
+      - The behaviour of the Keycloak with the LDAP.
+    choices:
+      - READ_ONLY
+      - UNSYNCED
+      - WRITABLE
+    type: str
+    aliases: [ editMode ]
 
-    import_enable:
-        description:
-            - Whether to import the user from the LDAP into the Keycloak databases
-        type: bool
-        aliases: [ importEnable ]
+  import_enable:
+    description:
+      - Whether to import the user from the LDAP into the Keycloak databases
+    type: bool
+    aliases: [ importEnable ]
 
-    synchronize_registrations:
-        description:
-            - Should new user in the Keycloak be created within the LDAP
-        type: bool
-        aliases: [ sync_registrations, synchronizeRegistrations, syncRegistrations ]
+  synchronize_registrations:
+    description:
+      - Should new user in the Keycloak be created within the LDAP
+    type: bool
+    aliases: [ sync_registrations, synchronizeRegistrations, syncRegistrations ]
 
-    customer_user_ldap_filter:
-        description:
-            - Filter for searching user in the LDAP
-        type: str
-        aliases: [ customUserSearchFilter, custom_user_search_filter, customUserLdapFilter, customUserLDAPFilter, customUserLDAPFilter ]
+  customer_user_ldap_filter:
+    description:
+      - Filter for searching user in the LDAP
+    type: str
+    aliases: [ customUserSearchFilter, custom_user_search_filter, customUserLdapFilter, customUserLDAPFilter, customUserLDAPFilter ]
 
-    search_scope:
-        description:
-            - Set how users are search, on one level or in all the subtree
-        type: str
-        choices:
-            - one level
-            - subtree
-        aliases: [ searchScope ]
+  search_scope:
+    description:
+      - Set how users are search, on one level or in all the subtree
+    type: str
+    choices:
+      - one level
+      - subtree
+    aliases: [ searchScope ]
 
-    use_trustore_spi:
-        description:
-            - Whether LDAP connection will use the trustore SPI with the trustore conifgure in the standalone.xml
-        type: str
-        choices:
-            - ldapsOnly
-            - always
-            - never
-        aliases: [ useTruststoreSpi ]
+  use_trustore_spi:
+    description:
+      - Whether LDAP connection will use the trustore SPI with the trustore configure in the standalone.xml
+    type: str
+    choices:
+      - ldapsOnly
+      - always
+      - never
+    aliases: [ useTruststoreSpi ]
 
-    test_connection:
-        description:
-            - Check the connection to the LDAP server with a ping
-            - This parameter is mutually exclusive with test_authentication
-        type: bool
-        aliases: [ testConnection ]
+  test_connection:
+    description:
+      - Check the connection to the LDAP server with a ping
+      - This parameter is mutually exclusive with test_authentication
+    type: bool
+    aliases: [ testConnection ]
 
-    test_authentication:
-        description:
-            - Check the connection to the LDAP server with the admin credentials
-            - This parameter is mutually exclusive with test_connection
-        type: bool
-        aliases: [ testAuthentication ]
+  test_authentication:
+    description:
+      - Check the connection to the LDAP server with the admin credentials
+      - This parameter is mutually exclusive with test_connection
+    type: bool
+    aliases: [ testAuthentication ]
 
   batch_size_for_synchronization:
     description:
@@ -261,10 +261,10 @@ notes:
     I(useKerberosForPasswordAuthentication), I(batchSize) and I(cachePolicy).
 
 extends_documentation_fragment:
-    - keycloak
+  - keycloak
 
 author:
-    - Nicolas Duclert (@ndclt)
+  - Nicolas Duclert (@ndclt)
 '''
 
 EXAMPLES = r'''
@@ -571,7 +571,8 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     keycloak_argument_spec,
     KeycloakAuthorizationHeader,
 )
-from ansible.module_utils.common.dict_transformations import dict_merge, recursive_diff
+from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import LdapFederationBase
+from ansible.module_utils.common.dict_transformations import dict_merge
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import open_url
 from ansible.module_utils.six.moves.urllib.parse import quote, urlencode
@@ -585,102 +586,12 @@ TEST_LDAP_CONNECTION = '{url}/admin/realms/{realm}/testLDAPConnection'
 SEARCH_SCOPE = {'one level': 1, 'subtree': 2}
 
 
-class LdapFederation(object):
+class LdapFederation(LdapFederationBase):
     """Keycloak LDAP Federation class.
     """
 
     def __init__(self, module, connection_header):
-        self.module = module
-        self.restheaders = connection_header
-        self.federation = self._clean_payload(
-            self.get_federation(), credential_clean=False
-        )
-        try:
-            self.uuid = self.federation['id']
-        except KeyError:
-            self.uuid = ''
-
-    def _get_federation_url(self):
-        """Create the url in order to get the federation from the given argument (uuid or name)
-        :return: the url as string
-        :rtype: str
-        """
-        try:
-            return USER_FEDERATION_BY_UUID_URL.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                uuid=self.uuid,
-            )
-        except AttributeError:
-            if self.module.params.get('federation_id'):
-                return USER_FEDERATION_URL.format(
-                    url=self.module.params.get('auth_keycloak_url'),
-                    realm=quote(self.module.params.get('realm')),
-                    federation_id=quote(self.module.params.get('federation_id')),
-                )
-            return USER_FEDERATION_BY_UUID_URL.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                uuid=quote(self.module.params.get('federation_uuid')),
-            )
-
-    def get_federation(self):
-        """Get the federation information from keycloak
-
-        :return: the federation representation as a dictionary, if the asked
-        representation does not exist, a empty dictionary is returned.
-        :rtype: dict
-        """
-        get_url = self._get_federation_url()
-        realm = self.module.params.get('realm')
-        try:
-            json_federation = json.load(
-                open_url(
-                    get_url,
-                    method='GET',
-                    headers=self.restheaders.header,
-                    validate_certs=self.module.params.get('validate_certs'),
-                )
-            )
-        except HTTPError as e:
-            if e.code == 404:
-                return {}
-            else:
-                self.module.fail_json(
-                    msg='Could not obtain user federation %s for realm %s: %s'
-                    % (to_text(self.given_id), to_text(realm), to_text(e))
-                )
-        except ValueError as e:
-            self.module.fail_json(
-                msg=(
-                    'API returned incorrect JSON when trying to obtain user '
-                    'federation %s for realm %s: %s'
-                )
-                % (to_text(self.given_id), to_text(realm), to_text(e))
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not obtain user federation %s for realm %s: %s'
-                % (to_text(self.given_id), to_text(realm), to_text(e))
-            )
-        else:
-            if json_federation:
-                try:
-                    return json_federation[0]
-                except KeyError:
-                    return json_federation
-            return {}
-
-    @property
-    def given_id(self):
-        """Get the asked id given by the user.
-
-        :return the asked id given by the user as a name or an uuid.
-        :rtype: str
-        """
-        if self.module.params.get('federation_id'):
-            return self.module.params.get('federation_id')
-        return self.module.params.get('federation_uuid')
+        super(LdapFederation, self).__init__(module, connection_header)
 
     def delete(self):
         """Delete the federation"""
@@ -795,6 +706,9 @@ class LdapFederation(object):
         the tested functionality.
         The connection or authentication failure is identified with the 400
         http status code.
+
+        The payload is build from module arguments and if they are not given
+        (for an update) there are taken from the federation representation.
 
         :param extra_arguments: a dictionary with the action to do (
         authentication or connection)
@@ -952,31 +866,6 @@ class LdapFederation(object):
         :rtype: dict
         """
         return self._clean_payload(self._create_payload())
-
-    @staticmethod
-    def _clean_payload(payload, credential_clean=True):
-        """Clean the payload from credentials and extra list.
-
-        :param payload: the payload given to the post or put request.
-        :return: the cleaned payload
-        :rtype: dict
-        """
-        if not payload:
-            return {}
-        clean_payload = deepcopy(payload)
-        old_config = clean_payload.pop('config')
-        new_config = {}
-        for key, value in old_config.items():
-            if key == 'bindCredential' and credential_clean:
-                new_config.update({key: 'no_log'})
-            else:
-                try:
-                    new_config.update({key: value[0]})
-                except IndexError:
-                    new_config.update({key: None})
-
-        clean_payload.update({'config': new_config})
-        return clean_payload
 
     def check_mandatory_arguments(self, creation_payload):
         """Check if mandatory arguments for federation creation are present.
