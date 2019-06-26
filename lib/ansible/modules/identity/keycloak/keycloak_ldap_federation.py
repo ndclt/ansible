@@ -562,14 +562,19 @@ ldap_federation:
           sample: FOO.ORG
 '''
 
-import json
 from copy import deepcopy
 from ansible.module_utils._text import to_text
 from ansible.module_utils.identity.keycloak.keycloak import (
     camel,
     keycloak_argument_spec,
     get_token,
-    KeycloakError
+    KeycloakError,
+    delete_on_url,
+    post_on_url,
+    put_on_url,
+)
+from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
+    LdapFederationBase,
 )
 from ansible.module_utils.common.dict_transformations import dict_merge, recursive_diff
 from ansible.module_utils.basic import AnsibleModule
@@ -585,118 +590,22 @@ TEST_LDAP_CONNECTION = '{url}/admin/realms/{realm}/testLDAPConnection'
 SEARCH_SCOPE = {'one level': 1, 'subtree': 2}
 
 
-class LdapFederation(object):
+class LdapFederation(LdapFederationBase):
     """Keycloak LDAP Federation class.
     """
 
     def __init__(self, module, connection_header):
-        self.module = module
-        self.restheaders = connection_header
-        self.federation = self._clean_payload(
-            self.get_federation(), credential_clean=False
-        )
-        try:
-            self.uuid = self.federation['id']
-        except KeyError:
-            self.uuid = ''
-
-    def _get_federation_url(self):
-        """Create the url in order to get the federation from the given argument (uuid or name)
-        :return: the url as string
-        :rtype: str
-        """
-        try:
-            return USER_FEDERATION_BY_UUID_URL.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                uuid=self.uuid,
-            )
-        except AttributeError:
-            if self.module.params.get('federation_id'):
-                return USER_FEDERATION_URL.format(
-                    url=self.module.params.get('auth_keycloak_url'),
-                    realm=quote(self.module.params.get('realm')),
-                    federation_id=quote(self.module.params.get('federation_id')),
-                )
-            return USER_FEDERATION_BY_UUID_URL.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                uuid=quote(self.module.params.get('federation_uuid')),
-            )
-
-    def get_federation(self):
-        """Get the federation information from keycloak
-
-        :return: the federation representation as a dictionary, if the asked
-        representation does not exist, a empty dictionary is returned.
-        :rtype: dict
-        """
-        get_url = self._get_federation_url()
-        realm = self.module.params.get('realm')
-        try:
-            json_federation = json.load(
-                open_url(
-                    get_url,
-                    method='GET',
-                    headers=self.restheaders,
-                    validate_certs=self.module.params.get('validate_certs'),
-                )
-            )
-        except HTTPError as e:
-            if e.code == 404:
-                return {}
-            else:
-                self.module.fail_json(
-                    msg='Could not obtain user federation %s for realm %s: %s'
-                    % (to_text(self.given_id), to_text(realm), to_text(e))
-                )
-        except ValueError as e:
-            self.module.fail_json(
-                msg=(
-                    'API returned incorrect JSON when trying to obtain user '
-                    'federation %s for realm %s: %s'
-                )
-                % (to_text(self.given_id), to_text(realm), to_text(e))
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not obtain user federation %s for realm %s: %s'
-                % (to_text(self.given_id), to_text(realm), to_text(e))
-            )
-        else:
-            if json_federation:
-                try:
-                    return json_federation[0]
-                except KeyError:
-                    return json_federation
-            return {}
-
-    @property
-    def given_id(self):
-        """Get the asked id given by the user.
-
-        :return the asked id given by the user as a name or an uuid.
-        :rtype: str
-        """
-        if self.module.params.get('federation_id'):
-            return self.module.params.get('federation_id')
-        return self.module.params.get('federation_uuid')
+        super(LdapFederation, self).__init__(module, connection_header)
 
     def delete(self):
         """Delete the federation"""
         federation_url = self._get_federation_url()
-        try:
-            open_url(
-                federation_url,
-                method='DELETE',
-                headers=self.restheaders,
-                validate_certs=self.module.params.get('validate_certs'),
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not delete federation %s in realm %s: %s'
-                % (self.given_id, self.module.params.get('realm'), str(e))
-            )
+        delete_on_url(
+            federation_url,
+            self.restheaders,
+            self.module,
+            'federation %s' % self.given_id,
+        )
 
     def update(self, check=False):
         """Update the federation
@@ -719,23 +628,19 @@ class LdapFederation(object):
         if self.module.params.get('test_authentication'):
             self._test_connection()
             self._test_authentication()
-        try:
-            open_url(
-                put_url,
-                method='PUT',
-                headers=self.restheaders,
-                validate_certs=self.module.params.get('validate_certs'),
-                data=json.dumps(federation_payload),
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not update federation %s in realm %s: %s'
-                % (self.given_id, self.module.params.get('realm'), str(e))
-            )
+        put_on_url(
+            put_url,
+            self.restheaders,
+            self.module,
+            'federation %s' % self.given_id,
+            federation_payload,
+        )
         return self._clean_payload(federation_payload)
 
     def _arguments_update_representation(self):
-        clean_payload = self._clean_payload(self._create_payload(), credential_clean=False)
+        clean_payload = self._clean_payload(
+            self._create_payload(), credential_clean=False
+        )
         payload_diff, _ = recursive_diff(clean_payload, self.federation)
         payload_diff.pop('providerId')
         payload_diff.pop('providerType')
@@ -765,19 +670,13 @@ class LdapFederation(object):
         if self.module.params.get('test_authentication'):
             self._test_connection()
             self._test_authentication()
-        try:
-            open_url(
-                post_url,
-                method='POST',
-                headers=self.restheaders,
-                validate_certs=self.module.params.get('validate_certs'),
-                data=json.dumps(federation_payload),
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not create federation %s in realm %s: %s'
-                % (self.given_id, self.module.params.get('realm'), str(e))
-            )
+        post_on_url(
+            post_url,
+            self.restheaders,
+            self.module,
+            'federation %s' % self.given_id,
+            federation_payload,
+        )
         return self._clean_payload(federation_payload)
 
     def _test_connection(self):
@@ -904,7 +803,7 @@ class LdapFederation(object):
         not_federation_argument = list(keycloak_argument_spec().keys()) + [
             'state',
             'realm',
-            'test_authentication'
+            'test_authentication',
         ]
         for key, value in self.module.params.items():
             if value is not None and key not in not_federation_argument:
@@ -919,9 +818,7 @@ class LdapFederation(object):
                         value.sort()
                         config.update({camel(key): [', '.join(value)]})
                     else:
-                        config.update(
-                            {camel(key).replace('Ldap', 'LDAP'): [value]}
-                        )
+                        config.update({camel(key).replace('Ldap', 'LDAP'): [value]})
         try:
             old_configuration = {
                 key: [value] for key, value in self.federation['config'].items()
@@ -939,7 +836,7 @@ class LdapFederation(object):
             'evictionHour': None,
             'evictionMinute': None,
             'maxLifespan': None,
-            'batchSizeForSync': 1000
+            'batchSizeForSync': 1000,
         }
         payload.update(
             {
