@@ -20,14 +20,14 @@ module: keycloak_ldap_federation
 short_description: Allows administration of Keycloak LDAP federation via Keycloak API
 
 description:
-  - This module allows  you to add, remove or modify Keycloak LDAP federation via the Keycloak API.
+  - This module allows you to add, remove or modify Keycloak LDAP federation via the Keycloak API.
     It requires access to the REST API via OpenID Connect; the user connecting and the client being
     used must have the requisite access rights. In a default Keycloak installation, admin-cli
     and an admin user would work, as would a separate client definition with the scope tailored
     to your needs and a user having the expected roles.
 
   - The names of module options are snake_cased versions of the camelCase ones found in the
-    Keycloak API and its documentation at U(http://www.keycloak.org/docs-api/3.3/rest-api/).
+    Keycloak API and its documentation at U(http://www.keycloak.org/docs-api/6.0/rest-api/).
 
   - At creation and update, this module allows you to test the connection or the authentication
     to the LDAP service from the given arguments. If the connection or the authentication does
@@ -35,6 +35,8 @@ description:
 
   - When updating a LDAP federation, where possible provide the group ID to the module.
     This removes a lookup to the API to translate the name into the group ID.
+
+  - This module has been tested against keycloak 6.0, the backward compatibility is not garanteed. 
 
 version_added: "2.9"
 
@@ -60,7 +62,7 @@ options:
   federation_id:
     description:
       - The name of the federation
-      - Also called ID of the federationin the table of federations or
+      - Also called ID of the federation in the table of federations or
         the console display name in the detailed view of a federation
       - This parameter is mutually exclusive with federation_uuid and one
         of them is required by the module
@@ -254,6 +256,8 @@ notes:
     this module, I(importUser), I(connectionPooling) (and all associated parameters),
     I(allowKerberosAuthentication) (and all associated parameters),
     I(useKerberosForPasswordAuthentication), I(batchSize) and I(cachePolicy).
+  - The created federation will always be enabled. Adding this parameter in the payload bring 
+    keycloak about making weird things (some parameters are not updated anymore).
 
 extends_documentation_fragment:
   - keycloak
@@ -558,7 +562,6 @@ ldap_federation:
           sample: FOO.ORG
 '''
 
-import json
 from copy import deepcopy
 from ansible.module_utils._text import to_text
 from ansible.module_utils.identity.keycloak.keycloak import (
@@ -566,8 +569,13 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     keycloak_argument_spec,
     get_token,
     KeycloakError,
-    delete_on_url, post_on_url, put_on_url)
-from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import LdapFederationBase
+    delete_on_url,
+    post_on_url,
+    put_on_url,
+)
+from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
+    LdapFederationBase,
+)
 from ansible.module_utils.common.dict_transformations import dict_merge, recursive_diff
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import open_url
@@ -592,7 +600,12 @@ class LdapFederation(LdapFederationBase):
     def delete(self):
         """Delete the federation"""
         federation_url = self._get_federation_url()
-        delete_on_url(federation_url, self.restheaders, self.module, 'federation %s' % self.given_id)
+        delete_on_url(
+            federation_url,
+            self.restheaders,
+            self.module,
+            'federation %s' % self.given_id,
+        )
 
     def update(self, check=False):
         """Update the federation
@@ -615,11 +628,19 @@ class LdapFederation(LdapFederationBase):
         if self.module.params.get('test_authentication'):
             self._test_connection()
             self._test_authentication()
-        put_on_url(put_url, self.restheaders, self.module, 'federation %s' % self.given_id, federation_payload)
+        put_on_url(
+            put_url,
+            self.restheaders,
+            self.module,
+            'federation %s' % self.given_id,
+            federation_payload,
+        )
         return self._clean_payload(federation_payload)
 
     def _arguments_update_representation(self):
-        clean_payload = self._clean_payload(self._create_payload(), credential_clean=False)
+        clean_payload = self._clean_payload(
+            self._create_payload(), credential_clean=False
+        )
         payload_diff, _ = recursive_diff(clean_payload, self.federation)
         if not payload_diff:
             return False
@@ -647,7 +668,13 @@ class LdapFederation(LdapFederationBase):
         if self.module.params.get('test_authentication'):
             self._test_connection()
             self._test_authentication()
-        post_on_url(post_url, self.restheaders, self.module, 'federation %s' % self.given_id, federation_payload)
+        post_on_url(
+            post_url,
+            self.restheaders,
+            self.module,
+            'federation %s' % self.given_id,
+            federation_payload,
+        )
         return self._clean_payload(federation_payload)
 
     def _test_connection(self):
@@ -774,7 +801,7 @@ class LdapFederation(LdapFederationBase):
         not_federation_argument = list(keycloak_argument_spec().keys()) + [
             'state',
             'realm',
-            'test_authentication'
+            'test_authentication',
         ]
         for key, value in self.module.params.items():
             if value is not None and key not in not_federation_argument:
@@ -789,9 +816,7 @@ class LdapFederation(LdapFederationBase):
                         value.sort()
                         config.update({camel(key): [', '.join(value)]})
                     else:
-                        config.update(
-                            {camel(key).replace('Ldap', 'LDAP'): [value]}
-                        )
+                        config.update({camel(key).replace('Ldap', 'LDAP'): [value]})
         try:
             old_configuration = {
                 key: [value] for key, value in self.federation['config'].items()
@@ -809,7 +834,7 @@ class LdapFederation(LdapFederationBase):
             'evictionHour': None,
             'evictionMinute': None,
             'maxLifespan': None,
-            'batchSizeForSync': 1000
+            'batchSizeForSync': 1000,
         }
         payload.update(
             {

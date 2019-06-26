@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
+__metaclass__ = type
 
 import json
 from copy import deepcopy
 from itertools import count
 
+import pytest
 from ansible.module_utils._text import to_text
+from ansible.module_utils.six import StringIO
+from ansible.modules.identity.keycloak import keycloak_ldap_synchronization
 from units.modules.utils import (
     AnsibleExitJson,
     AnsibleFailJson,
@@ -13,11 +17,6 @@ from units.modules.utils import (
     exit_json,
     set_module_args,
 )
-from ansible.modules.identity.keycloak import keycloak_ldap_synchronization
-
-import pytest
-
-from ansible.module_utils.six import StringIO
 
 
 def create_wrapper(text_as_string):
@@ -52,28 +51,15 @@ def get_response(object_with_future_response, method, get_id_call_count):
     if callable(object_with_future_response):
         return object_with_future_response()
     if isinstance(object_with_future_response, dict):
-        return get_response(
-            object_with_future_response[method], method, get_id_call_count
-        )
+        return get_response(object_with_future_response[method], method, get_id_call_count)
     if isinstance(object_with_future_response, list):
         try:
             call_number = get_id_call_count.__next__()
         except AttributeError:
             # manage python 2 versions.
             call_number = get_id_call_count.next()
-        return get_response(
-            object_with_future_response[call_number], method, get_id_call_count
-        )
+        return get_response(object_with_future_response[call_number], method, get_id_call_count)
     return object_with_future_response
-
-
-@pytest.fixture
-def mock_get_token(mocker):
-    return mocker.patch(
-        'ansible.module_utils.identity.keycloak.keycloak.open_url',
-        side_effect=build_mocked_request(count(), CONNECTION_DICT),
-        autospec=True,
-    )
 
 
 @pytest.fixture
@@ -94,12 +80,8 @@ def mock_absent_url(mocker):
 
 
 def test_federation_does_not_exist_fail(monkeypatch, mock_absent_url):
-    monkeypatch.setattr(
-        keycloak_ldap_synchronization.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_ldap_synchronization.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_ldap_synchronization.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_synchronization.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -160,8 +142,12 @@ def mock_synchronisation_url(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/remove-imported-users': create_wrapper(''),
-            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/unlink-users': create_wrapper(''),
+            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/remove-imported-users': create_wrapper(
+                ''
+            ),
+            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/unlink-users': create_wrapper(
+                ''
+            ),
         }
     )
     return mocker.patch(
@@ -191,22 +177,13 @@ def mock_synchronisation_url(mocker):
         ),
         ({'unlink_users': True}, 'Unlink users of company-ldap.', 'unlink-users'),
     ],
-    ids=[
-        'Synchronize all users',
-        'Synchronize changed users',
-        'Remove users',
-        'Unlink users',
-    ],
+    ids=['Synchronize all users', 'Synchronize changed users', 'Remove users', 'Unlink users'],
 )
 def test_synchronize_change_user(
     monkeypatch, extra_arguments, waited_message, url_keyword, mock_synchronisation_url
 ):
-    monkeypatch.setattr(
-        keycloak_ldap_synchronization.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_ldap_synchronization.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_ldap_synchronization.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_synchronization.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -270,12 +247,8 @@ def mock_fail_synchronisation_url(mocker):
 
 
 def test_fail_synchronisation(monkeypatch, mock_fail_synchronisation_url):
-    monkeypatch.setattr(
-        keycloak_ldap_synchronization.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_ldap_synchronization.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_ldap_synchronization.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_synchronization.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',

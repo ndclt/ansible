@@ -28,7 +28,7 @@ description:
   - The names of module options are snake_cased versions of the camelCase ones found in the
     Keycloak API and its documentation at U(http://www.keycloak.org/docs-api/4.8/rest-api/).
     
-version_added: "2.9"
+version_added: "2.10"
 
 options:
   realm:
@@ -146,6 +146,8 @@ ALL_OPERATIONS = ['synchronize_changed_users', 'synchronize_all_users', 'remove_
 
 
 class LdapSynchronization(LdapFederationBase):
+    """This class manage the LDAP federation synchronization.
+    """
     def __init__(self, module, connection_header):
         super(LdapSynchronization, self).__init__(module, connection_header)
         self.message = ''
@@ -160,6 +162,8 @@ class LdapSynchronization(LdapFederationBase):
             )
 
     def synchronize(self):
+        """Do the asked synchronisation operation.
+        """
         synchronize_url = self._build_url()
         response = post_on_url(synchronize_url, self.restheaders, self.module, '{} for {}'.format(self.operation, self.given_id))
         try:
@@ -185,12 +189,17 @@ class LdapSynchronization(LdapFederationBase):
 
     @property
     def operation(self):
+        """Get the operation name given as module parameter.
+
+        :return: the user given operation name.
+        """
         for one_name in ALL_OPERATIONS:
             potential_operation = self.module.params.get(one_name)
             if potential_operation:
                 return one_name
 
     def _create_message(self, synchronisation_result):
+        """Create the message for the result or fail json."""
         # only the synchronization return a dictionary
         if synchronisation_result:
             self.message = synchronisation_result['status'] + '.'
@@ -203,6 +212,7 @@ class LdapSynchronization(LdapFederationBase):
                 raise ValueError('The operation does not have a message.')
 
     def _udpate_changed(self, synchronisation_result):
+        """With the returned informations, try to know if the keycloak is changed."""
         # if the post does not return a response, it is a call to unlink or
         # remove. The changed status have to stay to True..
         if synchronisation_result:
@@ -253,8 +263,8 @@ def run_module():
             auth_password=module.params.get('auth_password'),
             client_secret=module.params.get('auth_client_secret'),
         )
-    except KeycloakError as e:
-        module.fail_json(msg=str(e))
+    except KeycloakError as err:
+        module.fail_json(err)
     ldap_synchronization = LdapSynchronization(module, connection_header)
     ldap_synchronization.synchronize()
     result = {
