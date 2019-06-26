@@ -281,6 +281,7 @@ def test_state_present_should_create_absent_federation(
             'evictionHour': None,
             'evictionMinute': None,
             'maxLifespan': None,
+            'batchSizeForSync': 1000,
         },
         'name': 'company-ldap',
         'providerId': 'ldap',
