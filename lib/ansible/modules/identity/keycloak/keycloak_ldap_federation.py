@@ -7,11 +7,7 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community',
-}
+ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ['preview'], 'supported_by': 'community'}
 
 DOCUMENTATION = r'''
 ---
@@ -575,6 +571,11 @@ from ansible.module_utils.identity.keycloak.keycloak import (
 )
 from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
     LdapFederationBase,
+    COMPONENTS_URL,
+)
+from ansible.module_utils.identity.keycloak.utils import (
+    clean_payload_with_config,
+    if_absent_add_a_default_value,
 )
 from ansible.module_utils.common.dict_transformations import dict_merge, recursive_diff
 from ansible.module_utils.basic import AnsibleModule
@@ -584,7 +585,6 @@ from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 USER_FEDERATION_URL = '{url}/admin/realms/{realm}/components?parent={realm}&type=org.keycloak.storage.UserStorageProvider&name={federation_id}'
 USER_FEDERATION_BY_UUID_URL = '{url}/admin/realms/{realm}/components/{uuid}'
-COMPONENTS_URL = '{url}/admin/realms/{realm}/components/'
 TEST_LDAP_CONNECTION = '{url}/admin/realms/{realm}/testLDAPConnection'
 
 SEARCH_SCOPE = {'one level': 1, 'subtree': 2}
@@ -601,10 +601,7 @@ class LdapFederation(LdapFederationBase):
         """Delete the federation"""
         federation_url = self._get_federation_url()
         delete_on_url(
-            federation_url,
-            self.restheaders,
-            self.module,
-            'federation %s' % self.given_id,
+            federation_url, self.restheaders, self.module, 'federation %s' % self.given_id
         )
 
     def update(self, check=False):
@@ -617,7 +614,7 @@ class LdapFederation(LdapFederationBase):
             return {}
         federation_payload = self._create_payload()
         if check:
-            return self._clean_payload(federation_payload)
+            return clean_payload_with_config(federation_payload)
         put_url = USER_FEDERATION_BY_UUID_URL.format(
             url=self.module.params.get('auth_keycloak_url'),
             realm=quote(self.module.params.get('realm')),
@@ -635,13 +632,13 @@ class LdapFederation(LdapFederationBase):
             'federation %s' % self.given_id,
             federation_payload,
         )
-        return self._clean_payload(federation_payload)
+        return clean_payload_with_config(federation_payload)
 
     def _arguments_update_representation(self):
-        clean_payload = self._clean_payload(
-            self._create_payload(), credential_clean=False
-        )
+        clean_payload = clean_payload_with_config(self._create_payload(), credential_clean=False)
         payload_diff, _ = recursive_diff(clean_payload, self.federation)
+        payload_diff.pop('providerId')
+        payload_diff.pop('providerType')
         if not payload_diff:
             return False
         return True
@@ -675,7 +672,7 @@ class LdapFederation(LdapFederationBase):
             'federation %s' % self.given_id,
             federation_payload,
         )
-        return self._clean_payload(federation_payload)
+        return clean_payload_with_config(federation_payload)
 
     def _test_connection(self):
         """Test the connection to the LDAP server"""
@@ -691,10 +688,7 @@ class LdapFederation(LdapFederationBase):
             self.module.fail_json(
                 msg='The user %s cannot logged in the ldap at %s, '
                 'you should check your credentials.'
-                % (
-                    self.module.params.get('bind_dn'),
-                    self.module.params.get('connection_url'),
-                )
+                % (self.module.params.get('bind_dn'), self.module.params.get('connection_url'))
             )
 
     def _call_test_url(self, extra_arguments):
@@ -735,21 +729,14 @@ class LdapFederation(LdapFederationBase):
                     payload.update({camel(one_key): trust_store})
                 else:
                     payload.update(
-                        {
-                            camel(one_key): self.federation['config'].get(
-                                camel(one_key), ''
-                            )
-                        }
+                        {camel(one_key): self.federation['config'].get(camel(one_key), '')}
                     )
         payload.update(extra_arguments)
         test_url = TEST_LDAP_CONNECTION.format(
-            url=self.module.params.get('auth_keycloak_url'),
-            realm=self.module.params.get('realm'),
+            url=self.module.params.get('auth_keycloak_url'), realm=self.module.params.get('realm')
         )
         headers = deepcopy(self.restheaders)
-        headers.update(
-            {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
-        )
+        headers.update({'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'})
         try:
             open_url(
                 test_url,
@@ -818,9 +805,7 @@ class LdapFederation(LdapFederationBase):
                     else:
                         config.update({camel(key).replace('Ldap', 'LDAP'): [value]})
         try:
-            old_configuration = {
-                key: [value] for key, value in self.federation['config'].items()
-            }
+            old_configuration = {key: [value] for key, value in self.federation['config'].items()}
         except KeyError:
             old_configuration = {}
         new_configuration = dict_merge(old_configuration, config)
@@ -837,24 +822,8 @@ class LdapFederation(LdapFederationBase):
             'batchSizeForSync': 1000,
         }
         payload.update(
-            {
-                'config': self._if_absent_add_a_default_value(
-                    new_configuration, dict_of_default
-                )
-            }
+            {'config': if_absent_add_a_default_value(new_configuration, dict_of_default)}
         )
-        return payload
-
-    @staticmethod
-    def _if_absent_add_a_default_value(payload, dict_of_default):
-        for key in dict_of_default:
-            try:
-                payload[key]
-            except KeyError:
-                if dict_of_default[key] is None:
-                    payload.update({key: []})
-                else:
-                    payload.update({key: [dict_of_default[key]]})
         return payload
 
     def get_result(self):
@@ -863,7 +832,7 @@ class LdapFederation(LdapFederationBase):
         :return: the cleaned payload
         :rtype: dict
         """
-        return self._clean_payload(self._create_payload())
+        return clean_payload_with_config(self._create_payload())
 
     def check_mandatory_arguments(self, creation_payload):
         """Check if mandatory arguments for federation creation are present.
@@ -909,30 +878,19 @@ def run_module():
         federation_id=dict(type='str', aliases=['federerationId']),
         federation_uuid=dict(type='str', aliases=['federationUuid']),
         pagination=dict(type='bool'),
-        vendor=dict(
-            type='str', choices=['other', 'ad', 'rhds', 'tivoli', 'edirectory']
-        ),
+        vendor=dict(type='str', choices=['other', 'ad', 'rhds', 'tivoli', 'edirectory']),
         edit_mode=dict(
-            type='str',
-            choices=['READ_ONLY', 'UNSYNCED', 'WRITABLE'],
-            aliases=['editMode'],
+            type='str', choices=['READ_ONLY', 'UNSYNCED', 'WRITABLE'], aliases=['editMode']
         ),
         import_enable=dict(type='bool', aliases=['importEnable']),
         username_ldap_attribute=dict(
             type='str',
-            aliases=[
-                'usernameLDAPAttribute',
-                'username_LDAP_attribute',
-                'usernameLdapAttribute',
-            ],
+            aliases=['usernameLDAPAttribute', 'username_LDAP_attribute', 'usernameLdapAttribute'],
         ),
         rdn_ldap_attribute=dict(
-            type='str',
-            aliases=['rdnLDAPAttribute', 'rdnLdapAttribute', 'rdn_LDAP_attribute'],
+            type='str', aliases=['rdnLDAPAttribute', 'rdnLdapAttribute', 'rdn_LDAP_attribute']
         ),
-        user_object_classes=dict(
-            type='list', elements='str', aliases=['userObjectClasses']
-        ),
+        user_object_classes=dict(type='list', elements='str', aliases=['userObjectClasses']),
         connection_url=dict(type='str', aliases=['connectionUrl']),
         users_dn=dict(type='str', aliases=['usersDn']),
         bind_dn=dict(type='str', aliases=['bindDn']),
@@ -948,38 +906,24 @@ def run_module():
             ],
         ),
         uuid_ldap_attribute=dict(
-            type='str',
-            aliases=['uuidLDAPAttribute', 'uuidLdapAttribute', 'uuid_LDAP_attribute'],
+            type='str', aliases=['uuidLDAPAttribute', 'uuidLdapAttribute', 'uuid_LDAP_attribute']
         ),
-        search_scope=dict(
-            type='str', choices=['one level', 'subtree'], aliases=['searchScope']
-        ),
+        search_scope=dict(type='str', choices=['one level', 'subtree'], aliases=['searchScope']),
         use_truststore_spi=dict(
-            type='str',
-            choices=['ldapsOnly', 'always', 'never'],
-            aliases=['useTruststoreSpi'],
+            type='str', choices=['ldapsOnly', 'always', 'never'], aliases=['useTruststoreSpi']
         ),
         test_connection=dict(type='bool', aliases=['testConnection']),
         test_authentication=dict(type='bool', aliases=['testAuthentication']),
         synchronize_registrations=dict(
             type='bool',
-            aliases=[
-                'sync_registrations',
-                'synchronizeRegistrations',
-                'syncRegistrations',
-            ],
+            aliases=['sync_registrations', 'synchronizeRegistrations', 'syncRegistrations'],
         ),
         batch_size_for_synchronization=dict(
             type='int',
-            aliases=[
-                'batch_size_for_sync',
-                'batchSizeForSynchronization',
-                'batchSizeForSync',
-            ],
+            aliases=['batch_size_for_sync', 'batchSizeForSynchronization', 'batchSizeForSync'],
         ),
         full_synchronization_period=dict(
-            type='int',
-            aliases=['full_sync_period', 'fullSynchronizationPeriod', 'fullSyncPeriod'],
+            type='int', aliases=['full_sync_period', 'fullSynchronizationPeriod', 'fullSyncPeriod']
         ),
         changed_user_synchronization_period=dict(
             type='int',
@@ -1038,9 +982,7 @@ def run_module():
             if not module.check_mode:
                 ldap_federation.delete()
             result['msg'] = to_text(
-                'Federation {given_id} deleted.'.format(
-                    given_id=ldap_federation.given_id
-                )
+                'Federation {given_id} deleted.'.format(given_id=ldap_federation.given_id)
             )
             result['changed'] = True
         result['ldap_federation'] = {}
@@ -1052,9 +994,7 @@ def run_module():
                 payload = ldap_federation.get_result()
 
             result['msg'] = to_text(
-                'Federation {given_id} created.'.format(
-                    given_id=ldap_federation.given_id
-                )
+                'Federation {given_id} created.'.format(given_id=ldap_federation.given_id)
             )
             result['changed'] = True
             result['ldap_federation'] = payload
@@ -1065,9 +1005,7 @@ def run_module():
                 payload = ldap_federation.update(check=True)
             if payload:
                 result['msg'] = to_text(
-                    'Federation {given_id} updated.'.format(
-                        given_id=ldap_federation.given_id
-                    )
+                    'Federation {given_id} updated.'.format(given_id=ldap_federation.given_id)
                 )
                 result['changed'] = True
             else:
