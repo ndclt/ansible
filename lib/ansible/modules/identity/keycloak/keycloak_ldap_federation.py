@@ -235,8 +235,30 @@ options:
     type: int
     aliases: [ changedUserSyncPeriod, changedUserSynchronizationPeriod, changed_user_sync_period ]
 
+  validate_password_policy:
+    description:
+      - whether Keycloak should validate the password with the realm password 
+        policy before updating it
+    type: bool
+    aliases: [ validatePasswordPolicy ]
+
+  read_timeout:
+    description:
+      - LDAP timeout in milliseconds for read operations
+    type: int
+    aliases: [ readTimeout ]
+
+  connection_timeout:
+    description:
+      - LDAP connection timeout in milliseconds
+    type: int
+    aliases: [ connectionTimeout ]
+
 notes:
-    - The following parameters existing in the UI are not taken into account in this module, I(importUser), I(validatePasswordPolicy), I(connectionPooling) (and all associated parameters), I(connectionTimeout), I(readTimeout), I(allowKerberosAuthentication) (and all associated parameters), I(useKerberosForPasswordAuthentication), I(batchSize), I(periodicFullSync), I(periodicChangedUserSync) and I(cachePolicy). 
+  - The following parameters existing in the UI are not taken into account in
+    this module, I(importUser), I(connectionPooling) (and all associated parameters),
+    I(allowKerberosAuthentication) (and all associated parameters),
+    I(useKerberosForPasswordAuthentication), I(batchSize) and I(cachePolicy).
 
 extends_documentation_fragment:
     - keycloak
@@ -549,7 +571,7 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     keycloak_argument_spec,
     KeycloakAuthorizationHeader,
 )
-from ansible.module_utils.common.dict_transformations import dict_merge
+from ansible.module_utils.common.dict_transformations import dict_merge, recursive_diff
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import open_url
 from ansible.module_utils.six.moves.urllib.parse import quote, urlencode
@@ -852,7 +874,12 @@ class LdapFederation(object):
         :rtype: dict
         """
         translation = {'federation_id': 'name', 'federation_uuid': 'id'}
-        config_translation = {'synchronize_registrations': 'syncRegistrations'}
+        config_translation = {
+            'synchronize_registrations': 'syncRegistrations',
+            'full_synchronization_period': 'fullSyncPeriod',
+            'changed_user_synchronization_period': 'changedSyncPeriod',
+            'batch_size_for_synchronization': 'batchSizeForSync',
+        }
         config = {}
         payload = {
             'providerId': 'ldap',
@@ -876,7 +903,7 @@ class LdapFederation(object):
                         config.update({camel(key): [', '.join(value)]})
                     else:
                         config.update(
-                            {camel(key).replace('Ldap', 'LDAP'): [str(value)]}
+                            {camel(key).replace('Ldap', 'LDAP'): [value]}
                         )
         try:
             old_configuration = {
@@ -895,6 +922,7 @@ class LdapFederation(object):
             'evictionHour': None,
             'evictionMinute': None,
             'maxLifespan': None,
+            'batchSizeForSync': 1000
         }
         payload.update(
             {
@@ -1075,6 +1103,9 @@ def run_module():
                 'changed_user_sync_period',
             ],
         ),
+        validate_password_policy=dict(type='bool', aliases=['validatePasswordPolicy']),
+        read_timeout=dict(type='int', aliases=['readTimeout']),
+        connection_timeout=dict(type='int', aliases=['connectionTimeout']),
     )
     # option not taken into account:
     # cache_policy=dict(type=str, choices=['DEFAULT', 'EVICT_DAILY', 'EVICT_WEEKLY', 'MAX_LIFESPAN'], aliases=['cachePolicy'])
