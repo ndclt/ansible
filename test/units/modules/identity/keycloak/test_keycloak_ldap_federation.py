@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
-
-from copy import deepcopy
-
 __metaclass__ = type
 
 
 import json
+from copy import deepcopy
 from itertools import count, filterfalse
 
 import pytest

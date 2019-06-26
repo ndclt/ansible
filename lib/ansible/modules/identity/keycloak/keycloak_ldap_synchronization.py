@@ -264,7 +264,7 @@ def run_module():
             client_secret=module.params.get('auth_client_secret'),
         )
     except KeycloakError as err:
-        module.fail_json(err)
+        module.fail_json(msg=err)
     ldap_synchronization = LdapSynchronization(module, connection_header)
     ldap_synchronization.synchronize()
     result = {

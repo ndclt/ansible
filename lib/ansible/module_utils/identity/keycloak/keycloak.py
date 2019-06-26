@@ -133,7 +133,7 @@ def call_with_payload_on_url(url, restheaders, module, description, method, repr
                         headers=restheaders,
                         data=pushed_data,
                         validate_certs=validate_certs)
-    except Exception as e:
+    except HTTPError as e:
         module.fail_json(
             msg=to_text("Could not %s %s in realm %s: %s" % (
                 method_verb[method], description, realm, str(e))))
@@ -154,7 +154,7 @@ def delete_on_url(url, restheaders, module, description):
         return open_url(url, method='DELETE',
                         headers=restheaders,
                         validate_certs=validate_certs)
-    except Exception as e:
+    except HTTPError as e:
         module.fail_json(
             msg="Could not delete %s in realm %s: %s" % (description, realm, str(e)))
 

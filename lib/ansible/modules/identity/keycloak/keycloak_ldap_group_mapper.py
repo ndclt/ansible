@@ -1,0 +1,709 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Copyright: (c) 2018, Nicolas Duclert <nicolas.duclert@metronlab.com>
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+from __future__ import absolute_import, division, print_function
+
+__metaclass__ = type
+
+ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ['preview'], 'supported_by': 'community'}
+
+DOCUMENTATION = r'''
+---
+module: keycloak_ldap_group_mapper
+
+short_description: Allows administration of Keycloak LDAP group mapper via Keycloak API
+description:
+  - This module allows you to add, remove or modify Keycloak LDAP group mapper via the Keycloak API.
+    It requires access to the REST API via OpenID Connect; the user connecting and the client being
+    used must have the requisite access rights. In a default Keycloak installation, admin-cli
+    and an admin user would work, as would a separate client definition with the scope tailored
+    to your needs and a user having the expected roles.
+
+  - When updating a LDAP group mapper federation, where possible provide the mapper ID to the
+    module. This removes a lookup to the API to translate the name into the mapper ID.
+
+  - This module has been tested against keycloak 6.0, the backward compatibility is not garanteed. 
+
+version_added: "2.10"
+options:
+  state:
+    description:
+      - State of the LDAP federation.
+      - On C(present), the group will be created if it does not yet exist, or updated with the parameters you provide.
+      - On C(absent), the group will be removed if it exists.
+    required: true
+    default: present
+    type: str
+    choices:
+      - present
+      - absent
+
+  realm:
+    type: str
+    description:
+      - They Keycloak realm under which this LDAP federation resides.
+    default: 'master'
+
+  federation_id:
+    description:
+      - The name of the federation
+      - Also called ID of the federation in the table of federations or
+        the console display name in the detailed view of a federation
+      - This parameter is mutually exclusive with federation_uuid and one
+        of them is required by the module
+    type: str
+
+  federation_uuid:
+    description:
+      - The uuid of the federation
+      - This parameter is mutually exclusive with federation_id and one
+        of them is required by the module
+    type: str
+  
+  mapper_name:
+    description:
+      - The name of the group mapper
+      - This parameter is mutually exclusive with mapper_uuid and one
+        of them is required by the module
+    type: str
+        
+  mapper_uuid:
+    description:
+      - The uuid of the group mapper
+      - This parameter is mutually exclusive with mapper_name and one
+        of them is required by the module
+    type: str
+        
+  groups_dn:
+    description:
+      - LDAP DN where are groups of this tree saved
+      - This parameter is mandatory when creating a new LDAP group mapper
+    type: str
+  
+  group_name_ldap_attribute:
+    description:
+      - Name of LDAP attribute, which is used in group objects for name and RDN of group
+    type: str
+  
+  group_object_classes:
+    description:
+      - List of class of the group object
+    type: list
+  
+  preserve_group_inheritance:
+    description:
+      - Flag whether group inheritance from LDAP should be propagated to Keycloak
+      - If C(no), then all LDAP groups will be mapped as flat top-level groups in Keycloak. 
+        Otherwise group inheritance is preserved into Keycloak, but the group sync might fail if
+        LDAP structure contains recursions or multiple parent groups per child groups
+      - If C(yes), this arguments is incompatible with I(membership_attribute_type=UID)
+    type: bool
+  
+  ignore_missing_groups:
+    description:
+      - Ignore missing groups in the group hierarchy
+    type: bool
+  
+  membership_ldap_attribute:
+    description:
+      - Name of LDAP attribute on group, which is used for membership mappings
+    type: str
+  
+  membership_attribute_type:
+    description:
+      - Describe the way the members of the group are declared
+      - C(DN): LDAP group has it's members declared in form of their full DN,
+      - C(UID): LDAP group has it's members declared in form of pure user uids
+      - If C(UID), this arguments is incompatible with I(preserve_group_inheritance=yes)
+    choices:
+      - DN
+      - UID
+    type: str
+  
+  membership_user_ldap_attribute:
+    description:
+      - Used just if I(membership_attribute_type=UID)
+      - It is name of LDAP attribute on user, which is used for membership mappings
+    type: str
+   
+  groups_ldap_filter:
+    description:
+      - LDAP Filter adds additional custom filter to the whole query for retrieve LDAP groups
+      - Filter must start with '(' and ends with ')'
+    type: str
+  
+  mode:
+    description:
+      - Select the way group will be created or not in the Keycloak database 
+      - C(LDAP_ONLY): all group mappings of users are retrieved from LDAP and saved into LDAP
+      - C(READ_ONLY): read-only LDAP mode where group mappings are retrieved from both LDAP and 
+        DB and merged together. New group joins are not saved to LDAP but to DB.
+      - C(IMPORT): read-only LDAP mode where group mappings are retrieved from LDAP just at the 
+        time when user is imported from LDAP and then they are saved to local keycloak DB.
+    choices:
+      - LDAP_ONLY
+      - READ_ONLY
+      - IMPORT
+    type: str
+  
+  user_groups_retrieve_strategy:
+    description:
+      - Specify how to retrieve groups of user
+      - C(LOAD_GROUPS_BY_MEMBER_ATTRIBUTE): groups of user will be retrieved by sending LDAP 
+        query to retrieve all groups where 'member' is our user
+      - C(GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE): groups of user will be retrieved from 
+        memberOf attribute of our user. Or from the other attribute specified by 
+        I(member_of_ldap_attribute)
+      - C(LOAD_GROUPS_BY_MEMBER_ATTRIBUTE_RECURSIVELY): applicable just in Active Directory and it
+        means that groups of user will be retrieved recursively with usage of
+        LDAP_MATCHING_RULE_IN_CHAIN Ldap extension.
+    choices:
+      - LOAD_GROUPS_BY_MEMBER_ATTRIBUTE
+      - GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE
+      - LOAD_GROUPS_BY_MEMBER_ATTRIBUTE_RECURSIVELY
+
+  member_of_ldap_attribute:
+    description:
+      - Used just when I(user_groups_retrieve_strategy=GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE)
+      - It specifies the name of the LDAP attribute on the LDAP user, which contains the groups, 
+        which the user is member of
+    type: str
+  
+  mapped_group_attributes:
+    description:
+      - This points to the list of attributes on LDAP group, which will be mapped as attributes of
+        group in Keycloak.
+    type: list
+  
+  drop_non_existing_groups_during_sync:
+    description:
+      - If C(yes), then during sync of groups from LDAP to Keycloak, Keycloak groups which don't
+        exists in LDAP will be deleted
+    type: bool
+    
+extends_documentation_fragment:
+  - keycloak
+
+author:
+  - Nicolas Duclert (@ndclt)
+'''
+
+EXAMPLES = r'''
+- name: Create a LDAP group mapper
+  keycloak_ldap_group_mapper:
+    auth_client_id: admin-cli
+    auth_keycloak_url: https://auth.example.com/auth
+    auth_realm: master
+    auth_username: USERNAME
+    auth_password: PASSWORD
+    realm: master
+    federation_id: my-company-ldap
+    groups_dn: ou=Group,dc=MyCompany
+    membership_attribute_type: DN
+'''
+
+RETURN = r'''
+msg:
+  description: Message as to what action was taken
+  returned: always
+  type: str
+  sample: "Group mapper my-group-mapper created."
+
+changed:
+  description: whether the state of the keycloak configuration change
+  returned: always
+  type: bool
+
+group_mapper:
+  description: the LDAP group mapper representation. Empty if the asked group mapper is deleted or does not exist.
+  returned: always
+  type: dict
+  contains:
+    name:
+      description: name of the LDAP group mapper
+      type: str
+      returned: on success
+      sample: group-ldap-mapper1
+    providerId:
+      description: the id of the group mapper, always C(group-ldap-mapper) for this module
+      type: str
+      returned: on success
+      sample: group-ldap-mapper
+    parentId:
+      description: the LDAP group mapper parent uuid
+      type: str
+      returned: on success
+      sample: de455375-6900-46a0-8d11-51554e1c3f18
+    providerType:
+      description: the type of the object, for this module always C(org.keycloak.storage.ldap.mappers.LDAPStorageMapper)
+      type: str
+      returned: on success
+      sample: org.keycloak.storage.ldap.mappers.LDAPStorageMapper
+    config:
+      description: the configuration of the LDAP group mapper
+      type: dict
+      returned: on success
+      contains:
+        groups.dn:
+          description: LDAP DN where are groups of this tree saved
+          type: str
+          returned: on success
+          sample: ou=Group,dc=NewCompany
+        group.name.ldap.attribute:
+          description: Name of LDAP attribute, which is used in group objects for name and RDN of group
+          type: str
+          returned: on success
+          sample: cn
+        group.object.classes:
+          description: List of class of the group object
+          type: str
+          returned: on success
+          sample: groupOfNames
+        preserve.group.inheritance:
+          description: Flag whether group inheritance from LDAP should be propagated to Keycloak
+          type: bool
+          returned: on success
+          sample: true
+        groups.ldap.filter:
+          description: LDAP Filter adds additional custom filter to the whole query for retrieve LDAP groups
+          type: str
+          returned: on success
+          sample: (groupType=2147483652)
+        ignore.missing.groups:
+          description: Ignore missing groups in the group hierarchy
+          type: bool
+          returned: on success
+          sample: false
+        mapped.group.attributes:
+          description: This points to the list of attributes on LDAP group, which will be mapped as attributes of group in Keycloak.
+          type: str
+          returned: on success
+          sample: attribute1, attribute2
+        membership.ldap.attribute:
+          description: specifies the name of the LDAP attribute on the LDAP user
+          type: str
+          returned: on success
+          sample: memberOf
+        membership.attribute.type:
+          description: Describe the way the members of the group are declared
+          type: str
+          returned: on success
+          sample: DN
+        membership.user.ldap.attribute:
+          description: Describe the way the members of the group are declared
+          type: str
+          returned: on success
+          sample: DN
+        mode:
+          description: Select the way group will be created or not in the Keycloak database
+          type: str
+          returned: on success
+          sample: READ_ONLY
+        user.roles.retrieve.strategy:
+          description: Specify how to retrieve groups of user
+          type: str
+          returned: on success
+          sample: LOAD_GROUPS_BY_MEMBER_ATTRIBUTE
+        memberof.ldap.attribute:
+          description: specifies the name of the LDAP attribute on the LDAP user
+          type: str
+          returned: on success
+          sample: memberOf
+        drop.non.existing.groups.during.sync:
+          description: Specify if Keycloak groups which don't exists in LDAP will be deleted
+          type: str
+          returned: on success
+          sample: false
+'''
+
+from copy import deepcopy
+
+from ansible.module_utils.common.dict_transformations import recursive_diff, dict_merge
+
+from ansible.module_utils._text import to_text
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.six.moves.urllib.parse import quote
+from ansible.module_utils.identity.keycloak.utils import (
+    clean_payload_with_config,
+    if_absent_add_a_default_value,
+)
+from ansible.module_utils.identity.keycloak.keycloak import (
+    keycloak_argument_spec,
+    get_token,
+    KeycloakError,
+    get_on_url,
+    delete_on_url,
+    put_on_url,
+    post_on_url,
+)
+from ansible.module_utils.identity.keycloak.utils import snake_to_point_case, convert_to_bool
+from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
+    LdapFederationBase,
+    COMPONENTS_URL,
+)
+
+GROUP_MAPPER_BY_UUID_URL = '{url}/admin/realms/{realm}/components/{uuid}'
+GROUP_MAPPER_BY_NAME = '{url}/admin/realms/{realm}/components?parent={federation_uuid}&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name={mapper_name}'
+
+USER_GROUP_RETRIEVE_STRATEGY_LABEL = 'user.roles.retrieve.strategy'
+
+
+class FederationGroupMapper(object):
+    def __init__(self, module, connection_header):
+        self.module = module
+        self.restheaders = connection_header
+        self.description = 'mapper {}'.format(self.given_id)
+        if self.module.params.get('mapper_name'):
+            self.federation = LdapFederationBase(module, connection_header)
+            if not self.federation.uuid:
+                raise KeycloakError(
+                    'Cannot access mapper because {} federation does not exist.'.format(
+                        self.federation.given_id
+                    )
+                )
+        else:
+            self.federation = None
+        self.representation = clean_payload_with_config(
+            get_on_url(
+                url=self._get_mapper_url(),
+                restheaders=self.restheaders,
+                module=self.module,
+                description=self.description,
+            )
+        )
+        try:
+            self.uuid = self.representation['id']
+        except KeyError:
+            self.uuid = ''
+        else:
+            if self.representation['providerId'] != 'group-ldap-mapper':
+                raise KeycloakError(
+                    '{given_id} is not a group mapper.'.format(given_id=self.given_id))
+
+    @property
+    def given_id(self):
+        """Get the asked mapper id given by the user.
+
+        :return the asked id given by the user as a name or an uuid.
+        :rtype: str
+        """
+        if self.module.params.get('mapper_name'):
+            return self.module.params.get('mapper_name')
+        return self.module.params.get('mapper_uuid')
+
+    def _get_mapper_url(self):
+        """Create the url in order to get the federation from the given argument (uuid or name)
+        :return: the url as string
+        :rtype: str"""
+        try:
+            return GROUP_MAPPER_BY_UUID_URL.format(
+                url=self.module.params.get('auth_keycloak_url'),
+                realm=quote(self.module.params.get('realm')),
+                uuid=self.uuid,
+            )
+        except AttributeError:
+            if self.module.params.get('mapper_name'):
+                return GROUP_MAPPER_BY_NAME.format(
+                    url=self.module.params.get('auth_keycloak_url'),
+                    realm=quote(self.module.params.get('realm')),
+                    mapper_name=quote(self.module.params.get('mapper_name').lower()),
+                    federation_uuid=self.federation.uuid,
+                )
+            return GROUP_MAPPER_BY_UUID_URL.format(
+                url=self.module.params.get('auth_keycloak_url'),
+                realm=quote(self.module.params.get('realm')),
+                uuid=quote(self.module.params.get('mapper_uuid')),
+            )
+
+    def _create_payload(self):
+        translation = {'mapper_name': 'name', 'mapper_uuid': 'id'}
+        # manage a typo in the api in order to have the correct name in the payload.
+        config_translation = {
+            'user_groups_retrieve_strategy': USER_GROUP_RETRIEVE_STRATEGY_LABEL,
+            'member_of_ldap_attribute': 'memberof.ldap.attribute',
+        }
+
+        not_mapper_argument = list(keycloak_argument_spec().keys()) + [
+            'state',
+            'realm',
+            'federation_id',
+        ]
+
+        config = {}
+        payload = {
+            'providerId': 'group-ldap-mapper',
+            'providerType': 'org.keycloak.storage.ldap.mappers.LDAPStorageMapper',
+        }
+        if self.federation:
+            payload.update({'parentId': self.federation.uuid})
+        for key, value in self.module.params.items():
+            if value is not None and key not in not_mapper_argument:
+                if key in list(translation.keys()):
+                    payload.update({translation[key]: value})
+                elif key in list(config_translation.keys()):
+                    config.update({config_translation[key]: [value]})
+                elif key == 'groups_ldap_filter':
+                    config.update({snake_to_point_case(key): [value.strip()]})
+                elif key in ['mapped_group_attributes', 'group_object_classes']:
+                    config.update({snake_to_point_case(key): [','.join(value)]})
+                else:
+                    config.update({snake_to_point_case(key): [value]})
+        try:
+            old_configuration = {
+                key: [value] for key, value in self.representation['config'].items()
+            }
+        except KeyError:
+            old_configuration = {}
+        new_configuration = dict_merge(old_configuration, config)
+        self._check_arguments(new_configuration)
+        dict_of_default = {
+            'groups.dn': 'ab',
+            'group.name.ldap.attribute': 'cn',
+            'group.object.classes': 'groupOfNames',
+            'preserve.group.inheritance': 'true',
+            'ignore.missing.groups': 'false',
+            'membership.ldap.attribute': 'member',
+            'membership.attribute.type': 'DN',
+            'membership.user.ldap.attribute': 'cn',
+            'groups.ldap.filter': '',
+            'mode': 'LDAP_ONLY',
+            'user.roles.retrieve.strategy': 'LOAD_GROUPS_BY_MEMBER_ATTRIBUTE',
+            'memberof.ldap.attribute': 'memberOf',
+            'mapped.group.attributes': '',
+            'drop.non.existing.groups.during.sync': 'false',
+        }
+        payload.update(
+            {'config': if_absent_add_a_default_value(new_configuration, dict_of_default)}
+        )
+        return payload
+
+    @staticmethod
+    def _check_arguments(new_configuration):
+        try:
+            preserve_group_inheritance = convert_to_bool(
+                new_configuration['preserve.group.inheritance'][0]
+            )
+            membership_attribute_type = new_configuration['membership.attribute.type'][0]
+        except KeyError:
+            pass
+        else:
+            if preserve_group_inheritance and (membership_attribute_type == 'UID'):
+                raise KeycloakError(
+                    'Not possible to preserve group inheritance and use UID membership type together.'
+                )
+        try:
+            user_groups_retrieve_strategy = new_configuration[USER_GROUP_RETRIEVE_STRATEGY_LABEL][
+                0
+            ]
+            member_of_ldap_attribute = new_configuration['memberof.ldap.attribute'][0]
+        except KeyError:
+            pass
+        else:
+            if (
+                user_groups_retrieve_strategy != 'GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE'
+                and member_of_ldap_attribute
+            ):
+                raise KeycloakError(
+                    'member of ldap attribute is only useful when user groups strategy is get groups '
+                    'from user member of attribute.'
+                )
+        try:
+            ldap_filter = new_configuration[snake_to_point_case('groups_ldap_filter')][0].strip()
+        except KeyError:
+            pass
+        else:
+            if ldap_filter[0] != '(' and ldap_filter[-1] != ')':
+                raise KeycloakError(
+                    'LDAP filter should begin with a opening bracket and end with closing braket.'
+                )
+
+    def delete(self):
+        delete_on_url(self._get_mapper_url(), self.restheaders, self.module, self.description)
+
+    def _arguments_update_representation(self):
+        clean_payload = clean_payload_with_config(self._create_payload(), credential_clean=False)
+        payload_without_empty_values = deepcopy(clean_payload)
+        for key, value in clean_payload['config'].items():
+            if not value:
+                payload_without_empty_values['config'].pop(key)
+        payload_diff, _ = recursive_diff(payload_without_empty_values, self.representation)
+        try:
+            config_diff = payload_diff.pop('config')
+        except KeyError:
+            config_diff = {}
+        if not payload_diff and not config_diff:
+            return False
+        return True
+
+    def update(self, check=False):
+        if not self._arguments_update_representation():
+            return {}
+        payload = self._create_payload()
+        if check:
+            return clean_payload_with_config(payload)
+        put_on_url(
+            self._get_mapper_url(), self.restheaders, self.module, self.description, payload
+        )
+        return clean_payload_with_config(payload)
+
+    def create(self, check=False):
+        if not self.module.params.get('groups_dn'):
+            raise KeycloakError('groups_dn is mandatory for group mapper creation.')
+        payload = self._create_payload()
+        if check:
+            return clean_payload_with_config(payload)
+        post_url = COMPONENTS_URL.format(
+            url=self.module.params.get('auth_keycloak_url'),
+            realm=quote(self.module.params.get('realm')),
+        )
+        post_on_url(
+            url=post_url,
+            restheaders=self.restheaders,
+            module=self.module,
+            description=self.description,
+            representation=payload,
+        )
+        return clean_payload_with_config(payload)
+
+
+def run_module():
+    argument_spec = keycloak_argument_spec()
+    meta_args = dict(
+        realm=dict(type='str', default='master'),
+        federation_id=dict(type='str'),
+        federation_uuid=dict(type='str'),
+        mapper_name=dict(type='str'),
+        mapper_uuid=dict(type='str'),
+        state=dict(type='str', default='present', choices=['present', 'absent']),
+        groups_dn=dict(type='str'),
+        group_name_ldap_attribute=dict(type='str'),
+        group_object_classes=dict(type='list'),
+        preserve_group_inheritance=dict(type='bool'),
+        ignore_missing_groups=dict(type='bool'),
+        membership_ldap_attribute=dict(type='str'),
+        membership_attribute_type=dict(type='str', choices=['DN', 'UID']),
+        membership_user_ldap_attribute=dict(type='str'),
+        groups_ldap_filter=dict(type='str'),  # should begin with a ( and end with another )
+        mode=dict(type='str', choices=['LDAP_ONLY', 'IMPORT', 'READ_ONLY']),
+        user_groups_retrieve_strategy=dict(
+            type='str',
+            choices=[
+                'LOAD_GROUPS_BY_MEMBER_ATTRIBUTE',
+                'GET_GROUPS_FROM_USER_MEMBEROF_ATTRIBUTE',
+                'LOAD_GROUPS_BY_MEMBER_ATTRIBUTE_RECURSIVELY',
+            ],
+        ),
+        member_of_ldap_attribute=dict(type='str'),
+        mapped_group_attributes=dict(type='list'),
+        drop_non_existing_groups_during_sync=dict(type='bool'),
+    )
+    argument_spec.update(meta_args)
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        supports_check_mode=True,
+        required_one_of=[['mapper_name', 'mapper_uuid']],
+        mutually_exclusive=[['mapper_name', 'mapper_uuid']],
+    )
+    if module.params.get('mapper_name') and not (
+        module.params.get('federation_id') or module.params.get('federation_uuid')
+    ):
+        module.fail_json(
+            msg='With mapper name, the federation_id or federation_uuid must be given.',
+            changed=False,
+            group_mapper={},
+        )
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as err:
+        module.fail_json(msg=str(err), changed=False, group_mapper={})
+    try:
+        federation_group_mapper = FederationGroupMapper(module, connection_header)
+    except KeycloakError as err:
+        module.fail_json(msg=str(err), changed=False, group_mapper={})
+    waited_state = module.params.get('state')
+    try:
+        result = crud_group_mapper(federation_group_mapper, module, waited_state)
+    except KeycloakError as err:
+        module.fail_json(msg=str(err), changed=False, group_mapper={})
+
+    module.exit_json(**result)
+
+
+def crud_group_mapper(federation_group_mapper, module, waited_state):
+    if waited_state == 'absent':
+        if federation_group_mapper.representation:
+            if not module.check_mode:
+                federation_group_mapper.delete()
+            result = {
+                'changed': True,
+                'msg': 'Group mapper {given_id} deleted.'.format(
+                    given_id=federation_group_mapper.given_id
+                ),
+                'group_mapper': {},
+            }
+        else:
+            result = {
+                'changed': False,
+                'msg': 'Group mapper {given_id} does not exist, doing nothing.'.format(
+                    given_id=federation_group_mapper.given_id
+                ),
+                'group_mapper': federation_group_mapper.representation,
+            }
+    else:
+        if federation_group_mapper.representation:
+            if module.check_mode:
+                payload = federation_group_mapper.update(check=True)
+            else:
+                payload = federation_group_mapper.update()
+            if payload:
+                result = {
+                    'msg': to_text(
+                        'Group mapper {given_id} updated.'.format(
+                            given_id=federation_group_mapper.given_id
+                        )
+                    ),
+                    'changed': True,
+                    'group_mapper': payload,
+                }
+            else:
+                result = {
+                    'changed': False,
+                    'msg': '{} group mapper up to date, doing nothing.'.format(
+                        federation_group_mapper.given_id
+                    ),
+                    'group_mapper': federation_group_mapper.representation,
+                }
+        else:
+            if module.check_mode:
+                payload = federation_group_mapper.create(check=True)
+            else:
+                payload = federation_group_mapper.create()
+            result = {
+                'msg': to_text(
+                    'Group mapper {given_id} created.'.format(
+                        given_id=federation_group_mapper.given_id
+                    )
+                ),
+                'changed': True,
+                'group_mapper': payload,
+            }
+
+    return result
+
+
+def main():
+    run_module()
+
+
+if __name__ == '__main__':
+    main()
