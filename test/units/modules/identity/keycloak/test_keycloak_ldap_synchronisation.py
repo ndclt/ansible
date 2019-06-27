@@ -160,8 +160,8 @@ def mock_synchronisation_url(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/remove-imported-users': None,
-            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/unlink-users': None,
+            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/remove-imported-users': create_wrapper(''),
+            'http://keycloak.url/auth/admin/realms/master/user-storage/123-123/unlink-users': create_wrapper(''),
         }
     )
     return mocker.patch(
