@@ -5,11 +5,6 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import absolute_import, division, print_function
 
-import json
-
-from ansible.module_utils._text import to_text
-from ansible.module_utils.basic import AnsibleModule
-
 __metaclass__ = type
 
 ANSIBLE_METADATA = {
@@ -131,6 +126,12 @@ changed:
   type: bool
 '''
 
+import json
+from json import JSONDecodeError
+
+from ansible.module_utils._text import to_text
+from ansible.module_utils.basic import AnsibleModule
+
 from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
     LdapFederationBase,
 )
@@ -162,7 +163,7 @@ class LdapSynchronization(LdapFederationBase):
         response = post_on_url(synchronize_url, self.restheaders, self.module, '{} for {}'.format(self.operation, self.given_id))
         try:
             synchronisation_result = json.load(response)
-        except AttributeError:
+        except JSONDecodeError:
             # This happens because the delete and unlink don't return a content.
             synchronisation_result = {}
         self._create_message(synchronisation_result)
