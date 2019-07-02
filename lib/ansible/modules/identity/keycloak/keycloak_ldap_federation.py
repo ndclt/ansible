@@ -802,6 +802,7 @@ class LdapFederation(LdapFederationBase):
         not_federation_argument = list(keycloak_argument_spec().keys()) + [
             'state',
             'realm',
+            'test_authentication'
         ]
         for key, value in self.module.params.items():
             if value is not None and key not in not_federation_argument:
