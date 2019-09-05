@@ -75,11 +75,6 @@ options:
     type: str
     aliases: [ federationUuid ]
 
-  enable:
-    description:
-      - whether the federation will be enable
-    type: bool
-
   pagination:
     description:
       - Does the LDAP server supports pagination.
@@ -911,7 +906,6 @@ def run_module():
         realm=dict(type='str', default='master'),
         federation_id=dict(type='str', aliases=['federerationId']),
         federation_uuid=dict(type='str', aliases=['federationUuid']),
-        enable=dict(type='bool'),
         pagination=dict(type='bool'),
         vendor=dict(
             type='str', choices=['other', 'ad', 'rhds', 'tivoli', 'edirectory']
