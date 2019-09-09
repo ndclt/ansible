@@ -319,45 +319,39 @@ class KeycloakError(Exception):
     pass
 
 
-class KeycloakAuthorizationHeader(object):
-    def __init__(self, base_url, validate_certs, auth_realm, client_id,
-                 auth_username, auth_password, client_secret):
-        self.validate_certs = validate_certs
-        self.auth_url = URL_TOKEN.format(url=base_url, realm=auth_realm)
-        temp_payload = {
-            'grant_type': 'password',
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'username': auth_username,
-            'password': auth_password,
+def get_token(base_url, validate_certs, auth_realm, client_id,
+              auth_username, auth_password, client_secret):
+    auth_url = URL_TOKEN.format(url=base_url, realm=auth_realm)
+    temp_payload = {
+        'grant_type': 'password',
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'username': auth_username,
+        'password': auth_password,
+    }
+    # Remove empty items, for instance missing client_secret
+    payload = dict(
+        (k, v) for k, v in temp_payload.items() if v is not None)
+    try:
+        r = json.load(open_url(auth_url, method='POST',
+                               validate_certs=validate_certs,
+                               data=urlencode(payload)))
+    except ValueError as e:
+        raise KeycloakError(
+            'API returned invalid JSON when trying to obtain access token from %s: %s'
+            % (auth_url, str(e)))
+    except Exception as e:
+        raise KeycloakError('Could not obtain access token from %s: %s'
+                            % (auth_url, str(e)))
+
+    try:
+        return {
+            'Authorization': 'Bearer ' + r['access_token'],
+            'Content-Type': 'application/json'
         }
-        # Remove empty items, for instance missing client_secret
-        self.payload = dict(
-            (k, v) for k, v in temp_payload.items() if v is not None)
-        self.header = {}
-        self.refresh_token()
-
-    def refresh_token(self):
-        try:
-            r = json.load(open_url(self.auth_url, method='POST',
-                                   validate_certs=self.validate_certs,
-                                   data=urlencode(self.payload)))
-        except ValueError as e:
-            raise KeycloakError(
-                'API returned invalid JSON when trying to obtain access token from %s: %s'
-                % (self.auth_url, str(e)))
-        except Exception as e:
-            raise KeycloakError('Could not obtain access token from %s: %s'
-                                % (self.auth_url, str(e)))
-
-        try:
-            self.header = {
-                'Authorization': 'Bearer ' + r['access_token'],
-                'Content-Type': 'application/json'
-            }
-        except KeyError:
-            raise KeycloakError(
-                'Could not obtain access token from %s' % self.auth_url)
+    except KeyError:
+        raise KeycloakError(
+            'Could not obtain access token from %s' % auth_url)
 
 
 class KeycloakAPI(object):
