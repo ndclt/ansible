@@ -62,9 +62,6 @@ URL_CLIENT_ROLE_IN_GROUP = "{url}/admin/realms/{realm}/groups/{group_id}/role-ma
 URL_USERS = "{url}/admin/realms/{realm}/users"
 URL_USER = "{url}/admin/realms/{realm}/users/{id}"
 
-URL_USERS = "{url}/admin/realms/{realm}/users"
-URL_USER = "{url}/admin/realms/{realm}/users/{id}"
-
 URL_CLIENT_SCOPE_MAPPINGS = "{url}/admin/realms/{realm}/{target}s/{id}/scope-mappings"
 URL_CLIENT_SCOPE_MAPPINGS_CLIENT = "{url}/admin/realms/{realm}/{target}s/{id}/scope-mappings/clients/{client}"
 URL_CLIENT_SCOPE_MAPPINGS_CLIENT_AVAILABLE = "{url}/admin/realms/{realm}/{target}s/{id}/scope-mappings/clients/{client}/available"
