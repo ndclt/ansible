@@ -199,7 +199,7 @@ end_state:
 '''
 
 from ansible.module_utils.identity.keycloak.keycloak import (
-    KeycloakAPI, camel, keycloak_argument_spec, KeycloakAuthorizationHeader
+    KeycloakAPI, camel, keycloak_argument_spec, get_token, KeycloakError
 )
 from ansible.module_utils.basic import AnsibleModule
 
@@ -267,15 +267,18 @@ def run_module():
             'Attributes are not in the correct format. Should be a dictionary with '
             'one value per key as string, integer and boolean'))
 
-    connection_header = KeycloakAuthorizationHeader(
-        base_url=module.params.get('auth_keycloak_url'),
-        validate_certs=module.params.get('validate_certs'),
-        auth_realm=module.params.get('auth_realm'),
-        client_id=module.params.get('auth_client_id'),
-        auth_username=module.params.get('auth_username'),
-        auth_password=module.params.get('auth_password'),
-        client_secret=module.params.get('auth_client_secret'),
-    )
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as e:
+        module.fail_json(msg=str(e))
     kc = KeycloakAPI(module, connection_header)
     before_user = get_initial_user(given_user_id, kc, realm)
 

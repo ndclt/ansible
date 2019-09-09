@@ -137,8 +137,9 @@ from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
 )
 from ansible.module_utils.identity.keycloak.keycloak import (
     keycloak_argument_spec,
-    KeycloakAuthorizationHeader,
+    get_token,
     post_on_url,
+    KeycloakError,
 )
 
 ALL_OPERATIONS = ['synchronize_changed_users', 'synchronize_all_users', 'remove_imported', 'unlink_users']
@@ -242,15 +243,18 @@ def run_module():
             ALL_OPERATIONS,
         ],
     )
-    connection_header = KeycloakAuthorizationHeader(
-        base_url=module.params.get('auth_keycloak_url'),
-        validate_certs=module.params.get('validate_certs'),
-        auth_realm=module.params.get('auth_realm'),
-        client_id=module.params.get('auth_client_id'),
-        auth_username=module.params.get('auth_username'),
-        auth_password=module.params.get('auth_password'),
-        client_secret=module.params.get('auth_client_secret'),
-    )
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as e:
+        module.fail_json(msg=str(e))
     ldap_synchronization = LdapSynchronization(module, connection_header)
     ldap_synchronization.synchronize()
     result = {

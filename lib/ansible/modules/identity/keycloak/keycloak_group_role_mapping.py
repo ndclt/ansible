@@ -146,7 +146,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible.module_utils._text import to_text
 from ansible.module_utils.identity.keycloak.keycloak import (
-    KeycloakAuthorizationHeader, KeycloakAPI, keycloak_argument_spec
+    get_token, KeycloakAPI, keycloak_argument_spec, KeycloakError
 )
 
 
@@ -184,15 +184,18 @@ def run_module():
     realm = module.params.get('realm')
     state = module.params.get('state')
     result = {}
-    connection_header = KeycloakAuthorizationHeader(
-        base_url=module.params.get('auth_keycloak_url'),
-        validate_certs=module.params.get('validate_certs'),
-        auth_realm=module.params.get('auth_realm'),
-        client_id=module.params.get('auth_client_id'),
-        auth_username=module.params.get('auth_username'),
-        auth_password=module.params.get('auth_password'),
-        client_secret=module.params.get('auth_client_secret'),
-    )
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as e:
+        module.fail_json(msg=str(e))
     kc = KeycloakAPI(module, connection_header)
 
     given_role_id = {'name': module.params.get('role_name')}

@@ -132,10 +132,11 @@ link_user_to_group:
 from ansible.module_utils.identity.keycloak.keycloak import (
     KeycloakAPI,
     keycloak_argument_spec,
-    KeycloakAuthorizationHeader,
+    get_token,
     get_on_url,
     put_on_url,
     delete_on_url,
+    KeycloakError,
 )
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils._text import to_text
@@ -294,15 +295,18 @@ def run_module():
             ['group_name', 'group_id'],
         ],
     )
-    connection_header = KeycloakAuthorizationHeader(
-        base_url=module.params.get('auth_keycloak_url'),
-        validate_certs=module.params.get('validate_certs'),
-        auth_realm=module.params.get('auth_realm'),
-        client_id=module.params.get('auth_client_id'),
-        auth_username=module.params.get('auth_username'),
-        auth_password=module.params.get('auth_password'),
-        client_secret=module.params.get('auth_client_secret'),
-    )
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as e:
+        module.fail_json(msg=str(e))
 
     link_user_to_group = KeycloakLinkUserToGroup(module, connection_header)
     state = module.params.get('state')

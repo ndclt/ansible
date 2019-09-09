@@ -564,7 +564,8 @@ from ansible.module_utils._text import to_text
 from ansible.module_utils.identity.keycloak.keycloak import (
     camel,
     keycloak_argument_spec,
-    KeycloakAuthorizationHeader,
+    get_token,
+    KeycloakError,
 )
 from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import LdapFederationBase
 from ansible.module_utils.common.dict_transformations import dict_merge
@@ -595,7 +596,7 @@ class LdapFederation(LdapFederationBase):
             open_url(
                 federation_url,
                 method='DELETE',
-                headers=self.restheaders.header,
+                headers=self.restheaders,
                 validate_certs=self.module.params.get('validate_certs'),
             )
         except Exception as e:
@@ -625,7 +626,7 @@ class LdapFederation(LdapFederationBase):
             open_url(
                 put_url,
                 method='PUT',
-                headers=self.restheaders.header,
+                headers=self.restheaders,
                 validate_certs=self.module.params.get('validate_certs'),
                 data=json.dumps(federation_payload),
             )
@@ -662,7 +663,7 @@ class LdapFederation(LdapFederationBase):
             open_url(
                 post_url,
                 method='POST',
-                headers=self.restheaders.header,
+                headers=self.restheaders,
                 validate_certs=self.module.params.get('validate_certs'),
                 data=json.dumps(federation_payload),
             )
@@ -742,7 +743,7 @@ class LdapFederation(LdapFederationBase):
             url=self.module.params.get('auth_keycloak_url'),
             realm=self.module.params.get('realm'),
         )
-        headers = deepcopy(self.restheaders.header)
+        headers = deepcopy(self.restheaders)
         headers.update(
             {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
         )
@@ -1009,15 +1010,18 @@ def run_module():
             ['test_connection', 'test_authentication'],
         ],
     )
-    connection_header = KeycloakAuthorizationHeader(
-        base_url=module.params.get('auth_keycloak_url'),
-        validate_certs=module.params.get('validate_certs'),
-        auth_realm=module.params.get('auth_realm'),
-        client_id=module.params.get('auth_client_id'),
-        auth_username=module.params.get('auth_username'),
-        auth_password=module.params.get('auth_password'),
-        client_secret=module.params.get('auth_client_secret'),
-    )
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as e:
+        module.fail_json(msg=str(e))
     ldap_federation = LdapFederation(module, connection_header)
     waited_state = module.params.get('state')
     result = {}
