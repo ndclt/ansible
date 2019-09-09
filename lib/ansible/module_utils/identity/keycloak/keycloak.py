@@ -89,7 +89,7 @@ def get_on_url(url, restheaders, module, description):
     realm = module.params.get('realm')
     try:
         return json.load(open_url(url, method='GET',
-                                  headers=restheaders.header,
+                                  headers= restheaders,
                                   validate_certs=validate_certs))
     except ValueError as e:
         module.fail_json(
@@ -118,7 +118,7 @@ def put_on_url(url, restheaders, module, description, representation=None):
         pushed_data = {}
     try:
         return open_url(url, method='PUT',
-                        headers=restheaders.header,
+                        headers= restheaders,
                         data=pushed_data,
                         validate_certs=validate_certs)
     except Exception as e:
@@ -140,7 +140,7 @@ def delete_on_url(url, restheaders, module, description):
     realm = module.params.get('realm')
     try:
         return open_url(url, method='DELETE',
-                        headers=restheaders.header,
+                        headers= restheaders,
                         validate_certs=validate_certs)
     except Exception as e:
         module.fail_json(
@@ -160,7 +160,7 @@ def get_on_url(url, restheaders, module, description):
     realm = module.params.get('realm')
     try:
         return json.load(open_url(url, method='GET',
-                                  headers=restheaders.header,
+                                  headers=restheaders,
                                   validate_certs=validate_certs))
     except HTTPError as e:
         if e.code == 404:
@@ -228,7 +228,7 @@ def call_with_payload_on_url(url, restheaders, module, description, method, repr
         pushed_data = {}
     try:
         return open_url(url, method=method,
-                        headers=restheaders.header,
+                        headers= restheaders,
                         data=pushed_data,
                         validate_certs=validate_certs)
     except Exception as e:
@@ -250,7 +250,7 @@ def delete_on_url(url, restheaders, module, description):
     realm = module.params.get('realm')
     try:
         return open_url(url, method='DELETE',
-                        headers=restheaders.header,
+                        headers=restheaders,
                         validate_certs=validate_certs)
     except Exception as e:
         module.fail_json(
@@ -376,7 +376,7 @@ class KeycloakAPI(object):
             clientlist_url += '?clientId=%s' % filter
 
         try:
-            return json.load(open_url(clientlist_url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(clientlist_url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of clients for realm %s: %s'
@@ -407,7 +407,7 @@ class KeycloakAPI(object):
         client_url = URL_CLIENT.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return json.load(open_url(client_url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(client_url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except HTTPError as e:
             if e.code == 404:
@@ -445,7 +445,7 @@ class KeycloakAPI(object):
         client_url = URL_CLIENT.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return open_url(client_url, method='PUT', headers=self.restheaders.header,
+            return open_url(client_url, method='PUT', headers=self.restheaders,
                             data=json.dumps(clientrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update client %s in realm %s: %s'
@@ -460,7 +460,7 @@ class KeycloakAPI(object):
         client_url = URL_CLIENTS.format(url=self.baseurl, realm=realm)
 
         try:
-            return open_url(client_url, method='POST', headers=self.restheaders.header,
+            return open_url(client_url, method='POST', headers=self.restheaders,
                             data=json.dumps(clientrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create client %s in realm %s: %s'
@@ -476,7 +476,7 @@ class KeycloakAPI(object):
         client_url = URL_CLIENT.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return open_url(client_url, method='DELETE', headers=self.restheaders.header,
+            return open_url(client_url, method='DELETE', headers=self.restheaders,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete client %s in realm %s: %s'
@@ -491,7 +491,7 @@ class KeycloakAPI(object):
         url = URL_CLIENTTEMPLATES.format(url=self.baseurl, realm=realm)
 
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain list of client templates for realm %s: %s'
@@ -510,7 +510,7 @@ class KeycloakAPI(object):
         url = URL_CLIENTTEMPLATE.format(url=self.baseurl, id=id, realm=realm)
 
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain client templates %s for realm %s: %s'
@@ -556,7 +556,7 @@ class KeycloakAPI(object):
         url = URL_CLIENTTEMPLATE.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return open_url(url, method='PUT', headers=self.restheaders.header,
+            return open_url(url, method='PUT', headers=self.restheaders,
                             data=json.dumps(clienttrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update client template %s in realm %s: %s'
@@ -571,7 +571,7 @@ class KeycloakAPI(object):
         url = URL_CLIENTTEMPLATES.format(url=self.baseurl, realm=realm)
 
         try:
-            return open_url(url, method='POST', headers=self.restheaders.header,
+            return open_url(url, method='POST', headers=self.restheaders,
                             data=json.dumps(clienttrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create client template %s in realm %s: %s'
@@ -587,7 +587,7 @@ class KeycloakAPI(object):
         url = URL_CLIENTTEMPLATE.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return open_url(url, method='DELETE', headers=self.restheaders.header,
+            return open_url(url, method='DELETE', headers=self.restheaders,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete client template %s in realm %s: %s'
@@ -602,7 +602,7 @@ class KeycloakAPI(object):
         url = URL_REALM.format(url=self.baseurl, realm=realm)
 
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
 
         except HTTPError as e:
@@ -626,7 +626,7 @@ class KeycloakAPI(object):
         url = URL_REALMS.format(url=self.baseurl)
 
         try:
-            return open_url(url, method='POST', headers=self.restheaders.header,
+            return open_url(url, method='POST', headers=self.restheaders,
                             data=json.dumps(realmrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create realm: %s'
@@ -642,7 +642,7 @@ class KeycloakAPI(object):
         url = URL_REALM.format(url=self.baseurl, realm=realm)
 
         try:
-            return open_url(url, method='PUT', headers=self.restheaders.header,
+            return open_url(url, method='PUT', headers=self.restheaders,
                             data=json.dumps(realmrep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update realm %s: %s'
@@ -657,7 +657,7 @@ class KeycloakAPI(object):
         url = URL_REALM.format(url=self.baseurl, realm=realm)
 
         try:
-            return open_url(url, method='DELETE', headers=self.restheaders.header,
+            return open_url(url, method='DELETE', headers=self.restheaders,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete realm %s: %s'
@@ -675,7 +675,7 @@ class KeycloakAPI(object):
         url = URL_CLIENT_SCOPE_MAPPINGS.format(url=self.baseurl, realm=realm, id=id, target=target)
 
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain scope mappings for %s in realm %s: %s'
@@ -701,7 +701,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM.format(url=self.baseurl, realm=realm, id=id,
                                                          target=target)
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain scope mapping for %s in realm %s: %s'
@@ -728,7 +728,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM_AVAILABLE.format(url=self.baseurl, realm=realm,
                                                                    id=id, target=target)
         try:
-            return json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            return json.load(open_url(url, method='GET', headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except ValueError as e:
             self.module.fail_json(msg='API returned incorrect JSON when trying to obtain available roles for realm %s: %s'
@@ -755,7 +755,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM.format(url=self.baseurl, realm=realm, id=id,
                                                          target=target)
         try:
-            return open_url(url, method='POST', headers=self.restheaders.header, data=json.dumps(roles),
+            return open_url(url, method='POST', headers=self.restheaders, data=json.dumps(roles),
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create/update scope mapping for %s in realm %s: %s'
@@ -779,7 +779,7 @@ class KeycloakAPI(object):
             url = URL_CLIENT_SCOPE_MAPPINGS_REALM.format(url=self.baseurl, realm=realm, id=id,
                                                          target=target)
         try:
-            return open_url(url, method='DELETE', headers=self.restheaders.header, data=json.dumps(roles),
+            return open_url(url, method='DELETE', headers=self.restheaders, data=json.dumps(roles),
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create/update scope mapping for %s in realm %s: %s'
@@ -807,7 +807,7 @@ class KeycloakAPI(object):
                 group_id=group_uuid
             )
         try:
-            return open_url(url=url, method=method, headers=self.restheaders.header,
+            return open_url(url=url, method=method, headers=self.restheaders,
                             validate_certs=self.validate_certs, data=json.dumps([role]))
         except Exception as e:
             self.module.fail_json(
@@ -825,7 +825,7 @@ class KeycloakAPI(object):
         if filter is not None:
             userlist_url += '?userId=%s' % filter
         try:
-            user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders.header,
+            user_json = json.load(open_url(userlist_url, method='GET', headers=self.restheaders,
                                            validate_certs=self.validate_certs))
             return user_json
         except ValueError as e:
@@ -845,7 +845,7 @@ class KeycloakAPI(object):
         url = URL_USER.format(url=self.baseurl, id=id, realm=realm)
         try:
             return json.load(
-                open_url(url, method='GET', headers=self.restheaders.header, validate_certs=self.validate_certs))
+                open_url(url, method='GET', headers=self.restheaders, validate_certs=self.validate_certs))
         except HTTPError as e:
             if e.code == 404:
                 return None
@@ -911,7 +911,7 @@ class KeycloakAPI(object):
         user_representation = self._put_values_in_list(user_representation, ['credentials'])
 
         try:
-            return open_url(user_url, method='POST', headers=self.restheaders.header,
+            return open_url(user_url, method='POST', headers=self.restheaders,
                             data=json.dumps(user_representation), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not create user %s in realm %s: %s'
@@ -937,7 +937,7 @@ class KeycloakAPI(object):
         user_url = URL_USER.format(url=self.baseurl, realm=realm, id=uuid)
 
         try:
-            return open_url(user_url, method='PUT', headers=self.restheaders.header,
+            return open_url(user_url, method='PUT', headers=self.restheaders,
                             data=json.dumps(user_representation),
                             validate_certs=self.validate_certs)
         except Exception as e:
@@ -976,7 +976,7 @@ class KeycloakAPI(object):
         user_url = URL_USER.format(url=self.baseurl, realm=realm, id=id)
 
         try:
-            return open_url(user_url, method='DELETE', headers=self.restheaders.header,
+            return open_url(user_url, method='DELETE', headers=self.restheaders,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete user %s in realm %s: %s'
@@ -984,7 +984,7 @@ class KeycloakAPI(object):
 
     def get_json_from_url(self, url):
         try:
-            user_json = json.load(open_url(url, method='GET', headers=self.restheaders.header,
+            user_json = json.load(open_url(url, method='GET', headers=self.restheaders,
                                            validate_certs=self.validate_certs))
             return user_json
         except ValueError as e:
@@ -1017,7 +1017,7 @@ class KeycloakAPI(object):
 
         try:
             return json.load(
-                open_url(role_url, method='GET', headers=self.restheaders.header,
+                open_url(role_url, method='GET', headers=self.restheaders,
                          validate_certs=self.validate_certs))
         except HTTPError as e:
             if e.code == 404:
@@ -1044,7 +1044,7 @@ class KeycloakAPI(object):
         role_url = URL_REALM_ROLE_BY_ID.format(url=self.baseurl, realm=quote(realm), id=quote(role_id))
 
         try:
-            return open_url(role_url, method='DELETE', headers=self.restheaders.header,
+            return open_url(role_url, method='DELETE', headers=self.restheaders,
                             validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not delete role %s in realm %s: %s'
@@ -1076,7 +1076,7 @@ class KeycloakAPI(object):
             role_url = URL_REALM_ROLES.format(url=self.baseurl, realm=quote(realm))
 
         try:
-            return open_url(role_url, method='POST', headers=self.restheaders.header,
+            return open_url(role_url, method='POST', headers=self.restheaders,
                             data=json.dumps(role_representation), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(
@@ -1094,7 +1094,7 @@ class KeycloakAPI(object):
         role_url = self.get_role_url(role_id, realm, client_uuid)
 
         try:
-            return open_url(role_url, method='PUT', headers=self.restheaders.header,
+            return open_url(role_url, method='PUT', headers=self.restheaders,
                             data=json.dumps(role_representation),
                             validate_certs=self.validate_certs)
         except Exception as e:
@@ -1115,7 +1115,7 @@ class KeycloakAPI(object):
         """
         groups_url = URL_GROUPS.format(url=self.baseurl, realm=realm)
         try:
-            return json.load(open_url(groups_url, method="GET", headers=self.restheaders.header,
+            return json.load(open_url(groups_url, method="GET", headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except Exception as e:
             self.module.fail_json(msg="Could not fetch list of groups in realm %s: %s"
@@ -1132,7 +1132,7 @@ class KeycloakAPI(object):
         """
         groups_url = URL_GROUP.format(url=self.baseurl, realm=realm, groupid=gid)
         try:
-            return json.load(open_url(groups_url, method="GET", headers=self.restheaders.header,
+            return json.load(open_url(groups_url, method="GET", headers=self.restheaders,
                                       validate_certs=self.validate_certs))
 
         except HTTPError as e:
@@ -1178,7 +1178,7 @@ class KeycloakAPI(object):
         )
         try:
             return json.load(open_url(url=effective_role_url, method="GET",
-                                      headers=self.restheaders.header,
+                                      headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except Exception as e:
             self.module.fail_json(
@@ -1193,7 +1193,7 @@ class KeycloakAPI(object):
         )
         try:
             return json.load(open_url(url=effective_role_url, method="GET",
-                                      headers=self.restheaders.header,
+                                      headers=self.restheaders,
                                       validate_certs=self.validate_certs))
         except Exception as e:
             self.module.fail_json(
@@ -1208,7 +1208,7 @@ class KeycloakAPI(object):
         """
         groups_url = URL_GROUPS.format(url=self.baseurl, realm=realm)
         try:
-            return open_url(groups_url, method='POST', headers=self.restheaders.header,
+            return open_url(groups_url, method='POST', headers=self.restheaders,
                             data=json.dumps(grouprep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg="Could not create group %s in realm %s: %s"
@@ -1223,7 +1223,7 @@ class KeycloakAPI(object):
         group_url = URL_GROUP.format(url=self.baseurl, realm=realm, groupid=grouprep['id'])
 
         try:
-            return open_url(group_url, method='PUT', headers=self.restheaders.header,
+            return open_url(group_url, method='PUT', headers=self.restheaders,
                             data=json.dumps(grouprep), validate_certs=self.validate_certs)
         except Exception as e:
             self.module.fail_json(msg='Could not update group %s in realm %s: %s'
@@ -1260,7 +1260,7 @@ class KeycloakAPI(object):
         # should have a good groupid by here.
         group_url = URL_GROUP.format(realm=realm, groupid=groupid, url=self.baseurl)
         try:
-            return open_url(group_url, method='DELETE', headers=self.restheaders.header,
+            return open_url(group_url, method='DELETE', headers=self.restheaders,
                             validate_certs=self.validate_certs)
 
         except Exception as e:
