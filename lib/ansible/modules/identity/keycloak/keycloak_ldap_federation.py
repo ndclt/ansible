@@ -566,9 +566,9 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     keycloak_argument_spec,
     get_token,
     KeycloakError,
-)
+    delete_on_url, post_on_url, put_on_url)
 from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import LdapFederationBase
-from ansible.module_utils.common.dict_transformations import dict_merge
+from ansible.module_utils.common.dict_transformations import dict_merge, recursive_diff
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.urls import open_url
 from ansible.module_utils.six.moves.urllib.parse import quote, urlencode
@@ -592,26 +592,19 @@ class LdapFederation(LdapFederationBase):
     def delete(self):
         """Delete the federation"""
         federation_url = self._get_federation_url()
-        try:
-            open_url(
-                federation_url,
-                method='DELETE',
-                headers=self.restheaders,
-                validate_certs=self.module.params.get('validate_certs'),
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not delete federation %s in realm %s: %s'
-                % (self.given_id, self.module.params.get('realm'), str(e))
-            )
+        delete_on_url(federation_url, self.restheaders, self.module, 'federation %s' % self.given_id)
 
-    def update(self):
+    def update(self, check=False):
         """Update the federation
 
         :return: the representation of the updated federation
         :rtype: dict
         """
+        if not self._arguments_update_representation():
+            return {}
         federation_payload = self._create_payload()
+        if check:
+            return self._clean_payload(federation_payload)
         put_url = USER_FEDERATION_BY_UUID_URL.format(
             url=self.module.params.get('auth_keycloak_url'),
             realm=quote(self.module.params.get('realm')),
@@ -622,20 +615,17 @@ class LdapFederation(LdapFederationBase):
         if self.module.params.get('test_authentication'):
             self._test_connection()
             self._test_authentication()
-        try:
-            open_url(
-                put_url,
-                method='PUT',
-                headers=self.restheaders,
-                validate_certs=self.module.params.get('validate_certs'),
-                data=json.dumps(federation_payload),
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not update federation %s in realm %s: %s'
-                % (self.given_id, self.module.params.get('realm'), str(e))
-            )
+        put_on_url(put_url, self.restheaders, self.module, 'federation %s' % self.given_id, federation_payload)
         return self._clean_payload(federation_payload)
+
+    def _arguments_update_representation(self):
+        clean_payload = self._clean_payload(self._create_payload(), credential_clean=False)
+        payload_diff, _ = recursive_diff(clean_payload, self.federation)
+        payload_diff.pop('providerId')
+        payload_diff.pop('providerType')
+        if not payload_diff:
+            return False
+        return True
 
     def create(self):
         """Create the federation from the given arguments.
@@ -659,19 +649,7 @@ class LdapFederation(LdapFederationBase):
         if self.module.params.get('test_authentication'):
             self._test_connection()
             self._test_authentication()
-        try:
-            open_url(
-                post_url,
-                method='POST',
-                headers=self.restheaders,
-                validate_certs=self.module.params.get('validate_certs'),
-                data=json.dumps(federation_payload),
-            )
-        except Exception as e:
-            self.module.fail_json(
-                msg='Could not create federation %s in realm %s: %s'
-                % (self.given_id, self.module.params.get('realm'), str(e))
-            )
+        post_on_url(post_url, self.restheaders, self.module, 'federation %s' % self.given_id, federation_payload)
         return self._clean_payload(federation_payload)
 
     def _test_connection(self):
@@ -1061,13 +1039,22 @@ def run_module():
             if not module.check_mode:
                 payload = ldap_federation.update()
             else:
-                payload = ldap_federation.get_result()
-            result['msg'] = to_text(
-                'Federation {given_id} updated.'.format(
-                    given_id=ldap_federation.given_id
+                payload = ldap_federation.update(check=True)
+            if payload:
+                result['msg'] = to_text(
+                    'Federation {given_id} updated.'.format(
+                        given_id=ldap_federation.given_id
+                    )
                 )
-            )
-            result['changed'] = True
+                result['changed'] = True
+            else:
+                result['msg'] = to_text(
+                    'Federation {given_id} up to date, doing nothing.'.format(
+                        given_id=ldap_federation.given_id
+                    )
+                )
+                result['changed'] = False
+
             result['ldap_federation'] = payload
 
     module.exit_json(**result)

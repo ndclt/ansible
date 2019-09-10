@@ -144,10 +144,10 @@ def call_with_payload_on_url(url, restheaders, module, description, method, repr
     validate_certs = module.params.get('validate_certs')
     realm = module.params.get('realm')
     method_verb = {
-        'PUT': 'modified',
-        'POST': 'created'
+        'PUT': 'modify',
+        'POST': 'create'
     }
-    if not representation:
+    if representation:
         pushed_data = json.dumps(representation)
     else:
         pushed_data = {}

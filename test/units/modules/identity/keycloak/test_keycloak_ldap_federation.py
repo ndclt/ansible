@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+
+__metaclass__ = type
+
+
 import json
 from copy import deepcopy
 from itertools import count, filterfalse
@@ -143,10 +147,13 @@ def test_state_absent_should_not_create_absent_federation(
     assert not ansible_exit_json['ldap_federation']
 
 
-@pytest.fixture()
-def mock_get_for_delete(mocker):
-    get_for_delete = deepcopy(CONNECTION_DICT)
-    get_for_delete.update({
+@pytest.fixture
+def mock_delete_url(mocker):
+    # This fixture does not return a full federation json, just an extract
+    # with parts needed in the test and some value in order to have object
+    # organisation.
+    delete_federation = deepcopy(CONNECTION_DICT)
+    delete_federation.update({
         'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=ldap-to-delete': create_wrapper(
             json.dumps(
                 [
@@ -159,36 +166,22 @@ def mock_get_for_delete(mocker):
                 ]
             )
         ),
-        'http://keycloak.url/auth/admin/realms/master/components/123-123': create_wrapper(
-            json.dumps(
-                {
-                    'id': '123-123',
-                    'name': 'ldap-to-delete',
-                    'parentId': 'master',
-                    'config': {'pagination': [True]},
-                }
-            )
-        ),
+        'http://keycloak.url/auth/admin/realms/master/components/123-123': {
+            'DELETE': None,
+            'GET': create_wrapper(
+                json.dumps(
+                    {
+                        'id': '123-123',
+                        'name': 'ldap-to-delete',
+                        'parentId': 'master',
+                        'config': {'pagination': [True]},
+                    }
+                )
+            ),
+        },
     })
     return mocker.patch(
         'ansible.module_utils.identity.keycloak.keycloak.open_url',
-        side_effect=build_mocked_request(count(), get_for_delete),
-        autospec=True,
-    )
-
-
-@pytest.fixture
-def mock_delete_url(mocker):
-    # This fixture does not return a full federation json, just an extract
-    # with parts needed in the test and some value in order to have object
-    # organisation.
-    delete_federation = {
-        'http://keycloak.url/auth/admin/realms/master/components/123-123': {
-            'DELETE': None,
-        },
-    }
-    return mocker.patch(
-        'ansible.modules.identity.keycloak.keycloak_ldap_federation.open_url',
         side_effect=build_mocked_request(count(), delete_federation),
         autospec=True,
     )
@@ -199,7 +192,7 @@ def mock_delete_url(mocker):
     [{'federation_id': 'ldap-to-delete'}, {'federation_uuid': '123-123'}],
 )
 def test_state_absent_should_delete_existing_federation(
-    monkeypatch, extra_arguments, mock_delete_url, mock_get_for_delete
+    monkeypatch, extra_arguments, mock_delete_url
 ):
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
@@ -226,33 +219,22 @@ def test_state_absent_should_delete_existing_federation(
 
 @pytest.fixture()
 def mock_create_url(mocker):
-    create_federation = {
+    create_federation = deepcopy(CONNECTION_DICT)
+    create_federation.update({
+        'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=company-ldap': create_wrapper(
+            json.dumps([])
+        ),
         'http://keycloak.url/auth/admin/realms/master/components/': None,
-    }
+    })
     return mocker.patch(
-        'ansible.modules.identity.keycloak.keycloak_ldap_federation.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), create_federation),
         autospec=True,
     )
 
 
-@pytest.fixture()
-def mock_get_for_create(mocker):
-    get_federation = deepcopy(CONNECTION_DICT)
-    get_federation.update({
-        'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=company-ldap': create_wrapper(
-            json.dumps([])
-        ),
-    })
-    return mocker.patch(
-        'ansible.module_utils.identity.keycloak.keycloak.open_url',
-        side_effect=build_mocked_request(count(), get_federation),
-        autospec=True,
-    )
-
-
 def test_state_present_should_create_absent_federation(
-    monkeypatch, mock_create_url, mock_get_for_create
+    monkeypatch, mock_create_url
 ):
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
@@ -324,7 +306,7 @@ def test_state_present_should_create_absent_federation(
         else:
             send_config.update({key: [value]})
     reference_result.update({'config': send_config})
-    create_call = mock_create_url.mock_calls[0]
+    create_call = mock_create_url.mock_calls[2]
     send_json = json.loads(create_call[2]['data'])
     diff_result = recursive_diff(send_json, reference_result)
     assert not diff_result
@@ -354,14 +336,13 @@ def test_create_payload_all_mandatory(monkeypatch, mock_absent_url):
 
 
 @pytest.fixture()
-def mock_create_url_with_check(mocker):
-    create_federation = {
-        'http://keycloak.url/auth/admin/realms/master/components/': None,
+def mock_check_connectivity(mocker):
+    check_connectivity = {
         'http://keycloak.url/auth/admin/realms/master/testLDAPConnection': None,
     }
     return mocker.patch(
         'ansible.modules.identity.keycloak.keycloak_ldap_federation.open_url',
-        side_effect=build_mocked_request(count(), create_federation),
+        side_effect=build_mocked_request(count(), check_connectivity),
         autospec=True,
     )
 
@@ -372,7 +353,7 @@ def mock_create_url_with_check(mocker):
     ids=['connection only', 'authentication'],
 )
 def test_arguments_check_connectivity_should_try_ldap_connection(
-    monkeypatch, extra_arguments, mock_create_url_with_check, mock_get_for_create
+    monkeypatch, extra_arguments, mock_create_url, mock_check_connectivity
 ):
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
@@ -403,7 +384,7 @@ def test_arguments_check_connectivity_should_try_ldap_connection(
     ansible_exit_json = exec_error.value.args[0]
     assert ansible_exit_json['msg'] == 'Federation company-ldap created.'
     assert ansible_exit_json['changed']
-    calls = mock_create_url_with_check.mock_calls
+    calls = mock_check_connectivity.mock_calls
     for one_call in filterfalse(lambda x: 'testLDAPConnection' not in x.args[0], calls):
         send_data = one_call.kwargs['data']
         assert urlencode({'bindCredential': 'ldap_admin_password'}) in send_data
@@ -419,6 +400,12 @@ def raise_400(url):
 
 @pytest.fixture()
 def mock_wrong_authentication_url(mocker, request):
+    create_federation = deepcopy(CONNECTION_DICT)
+    create_federation.update({
+        'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=company-ldap': create_wrapper(
+            json.dumps([])
+        ),
+    })
     ldap_connection = {
         'wrong LDAP address': raise_400(
             'http://keycloak.url/auth/admin/realms/master/testLDAPConnection'
@@ -430,14 +417,20 @@ def mock_wrong_authentication_url(mocker, request):
             ),
         ],
     }
-    create_federation = {
+    check_connection = {
+
         'http://keycloak.url/auth/admin/realms/master/testLDAPConnection': ldap_connection[
             request.node.callspec.id
         ],
     }
+    mocker.patch(
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
+        side_effect=build_mocked_request(count(), create_federation),
+        autospec=True,
+    )
     return mocker.patch(
         'ansible.modules.identity.keycloak.keycloak_ldap_federation.open_url',
-        side_effect=build_mocked_request(count(), create_federation),
+        side_effect=build_mocked_request(count(), check_connection),
         autospec=True,
     )
 
@@ -472,7 +465,6 @@ def test_wrong_ldap_credentials_should_raise_an_error(
     extra_arguments,
     waited_message,
     mock_wrong_authentication_url,
-    mock_get_for_create,
 ):
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
@@ -502,21 +494,8 @@ def test_wrong_ldap_credentials_should_raise_an_error(
 
 @pytest.fixture()
 def mock_update_url(mocker):
-    update_federation = {
-        'http://keycloak.url/auth/admin/realms/master/components/123-123': None,
-        'http://keycloak.url/auth/admin/realms/master/testLDAPConnection': None,
-    }
-    return mocker.patch(
-        'ansible.modules.identity.keycloak.keycloak_ldap_federation.open_url',
-        side_effect=build_mocked_request(count(), update_federation),
-        autospec=True,
-    )
-
-
-@pytest.fixture()
-def mock_get_for_update(mocker):
-    get_federation = deepcopy(CONNECTION_DICT)
-    get_federation.update({
+    update_federation = deepcopy(CONNECTION_DICT)
+    update_federation.update({
         'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=company-ldap': create_wrapper(
             json.dumps(
                 [
@@ -535,24 +514,28 @@ def mock_get_for_update(mocker):
                             'evictionMinute': [],
                             'maxLifespan': [],
                             'customUserSearchFilter': [],
+                            'connectionPooling': [False],
                             'syncRegistrations': [False],
                             'priority': [3],
                             'cachePolicy': ['DEFAULT'],
+                            'uuidLDAPAttribute': ['entryUUID'],
                         },
                     }
                 ]
             )
         ),
+        'http://keycloak.url/auth/admin/realms/master/components/123-123': None,
+        'http://keycloak.url/auth/admin/realms/master/testLDAPConnection': None,
     })
     return mocker.patch(
         'ansible.module_utils.identity.keycloak.keycloak.open_url',
-        side_effect=build_mocked_request(count(), get_federation),
+        side_effect=build_mocked_request(count(), update_federation),
         autospec=True,
     )
 
 
 def test_state_present_should_update_existing_federation(
-    monkeypatch, mock_get_for_update, mock_update_url
+    monkeypatch, mock_update_url
 ):
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
@@ -598,8 +581,29 @@ def test_state_present_should_update_existing_federation(
     assert not diff_result
 
 
+def test_same_values_should_not_update_an_existing_federation(
+    monkeypatch, mock_update_url
+):
+    monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'state': 'present',
+        'federation_id': 'company-ldap',
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleExitJson) as exec_error:
+        keycloak_ldap_federation.run_module()
+    ansible_exit_json = exec_error.value.args[0]
+    assert ansible_exit_json['msg'] == 'Federation company-ldap up to date, doing nothing.'
+
+
 def test_state_present_should_update_existing_federation_with_connect_check(
-    monkeypatch, mock_get_for_update, mock_update_url
+    monkeypatch, mock_update_url, mock_check_connectivity
 ):
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_federation.AnsibleModule, 'fail_json', fail_json)
@@ -625,7 +629,9 @@ def test_state_present_should_update_existing_federation_with_connect_check(
         assert urlencode({'bindDn': 'cn:admin'}) in send_data
 
 
-def test_create_payload_for_synchronization(monkeypatch, mock_get_for_update, mock_update_url):
+def test_create_payload_for_synchronization(
+    monkeypatch, mock_update_url, mock_check_connectivity
+):
     """When updating the sync registration of a federation, the payload needs
     to have some keys. If not, the response is 204 put the sync registration
     parameter is not updated."""
@@ -645,12 +651,20 @@ def test_create_payload_for_synchronization(monkeypatch, mock_get_for_update, mo
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson):
         keycloak_ldap_federation.run_module()
-    put_call = mock_update_url.mock_calls[0]
+    put_call = mock_update_url.mock_calls[2]
     pushed_data = json.loads(put_call[2]['data'])
     config = pushed_data.pop('config')
     all_config_keys = list(config.keys())
     mandatory_keys_for_sync = [
-        'batchSizeForSync', 'fullSyncPeriod', 'changedSyncPeriod', 'evictionDay', 'evictionHour', 'evictionMinute', 'maxLifespan', 'customUserSearchFilter']
+        'batchSizeForSync',
+        'fullSyncPeriod',
+        'changedSyncPeriod',
+        'evictionDay',
+        'evictionHour',
+        'evictionMinute',
+        'maxLifespan',
+        'customUserSearchFilter',
+    ]
     for one_key in mandatory_keys_for_sync:
         assert one_key in all_config_keys
     assert config['syncRegistrations'] == [True]
