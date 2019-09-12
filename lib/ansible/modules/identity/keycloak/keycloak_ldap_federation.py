@@ -737,8 +737,6 @@ class LdapFederation(object):
     def _arguments_update_representation(self):
         clean_payload = self._clean_payload(self._create_payload(), credential_clean=False)
         payload_diff, _ = recursive_diff(clean_payload, self.federation)
-        payload_diff.pop('providerId')
-        payload_diff.pop('providerType')
         if not payload_diff:
             return False
         return True

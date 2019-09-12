@@ -492,6 +492,8 @@ def mock_update_url(mocker):
                         'id': '123-123',
                         'name': 'company-ldap',
                         'parentId': 'master',
+                        'providerId': 'ldap',
+                        'providerType': 'org.keycloak.storage.UserStorageProvider',
                         'config': {
                             'pagination': [True],
                             'bindDn': ['cn:admin'],
