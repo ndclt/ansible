@@ -322,7 +322,7 @@ from copy import deepcopy
 
 from ansible.module_utils.common.dict_transformations import recursive_diff, dict_merge
 
-from ansible.module_utils._text import to_text
+from ansible.module_utils.identity.keycloak.crud import crud_with_instance
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six.moves.urllib.parse import quote
 from ansible.module_utils.identity.keycloak.utils import (
@@ -354,7 +354,8 @@ class FederationGroupMapper(object):
     def __init__(self, module, connection_header):
         self.module = module
         self.restheaders = connection_header
-        self.description = 'mapper {}'.format(self.given_id)
+        self.uuid = self.module.params.get('mapper_uuid')
+        self.description = 'group mapper {}'.format(self.given_id)
         if self.module.params.get('mapper_name'):
             self.federation = LdapFederationBase(module, connection_header)
             if not self.federation.uuid:
@@ -365,22 +366,11 @@ class FederationGroupMapper(object):
                 )
         else:
             self.federation = None
-        self.representation = clean_payload_with_config(
-            get_on_url(
-                url=self._get_mapper_url(),
-                restheaders=self.restheaders,
-                module=self.module,
-                description=self.description,
-            )
-        )
+        self.initial_representation = self.representation
         try:
-            self.uuid = self.representation['id']
+            self.uuid = self.initial_representation['id']
         except KeyError:
-            self.uuid = ''
-        else:
-            if self.representation['providerId'] != 'group-ldap-mapper':
-                raise KeycloakError(
-                    '{given_id} is not a group mapper.'.format(given_id=self.given_id))
+            pass
 
     @property
     def given_id(self):
@@ -397,25 +387,18 @@ class FederationGroupMapper(object):
         """Create the url in order to get the federation from the given argument (uuid or name)
         :return: the url as string
         :rtype: str"""
-        try:
+        if self.uuid:
             return GROUP_MAPPER_BY_UUID_URL.format(
                 url=self.module.params.get('auth_keycloak_url'),
                 realm=quote(self.module.params.get('realm')),
-                uuid=self.uuid,
+                uuid=quote(self.uuid),
             )
-        except AttributeError:
-            if self.module.params.get('mapper_name'):
-                return GROUP_MAPPER_BY_NAME.format(
-                    url=self.module.params.get('auth_keycloak_url'),
-                    realm=quote(self.module.params.get('realm')),
-                    mapper_name=quote(self.module.params.get('mapper_name').lower()),
-                    federation_uuid=self.federation.uuid,
-                )
-            return GROUP_MAPPER_BY_UUID_URL.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                uuid=quote(self.module.params.get('mapper_uuid')),
-            )
+        return GROUP_MAPPER_BY_NAME.format(
+            url=self.module.params.get('auth_keycloak_url'),
+            realm=quote(self.module.params.get('realm')),
+            mapper_name=quote(self.module.params.get('mapper_name').lower()),
+            federation_uuid=self.federation.uuid,
+        )
 
     def _create_payload(self):
         translation = {'mapper_name': 'name', 'mapper_uuid': 'id'}
@@ -452,7 +435,7 @@ class FederationGroupMapper(object):
                     config.update({snake_to_point_case(key): [value]})
         try:
             old_configuration = {
-                key: [value] for key, value in self.representation['config'].items()
+                key: [value] for key, value in self.initial_representation['config'].items()
             }
         except KeyError:
             old_configuration = {}
@@ -528,7 +511,7 @@ class FederationGroupMapper(object):
         for key, value in clean_payload['config'].items():
             if not value:
                 payload_without_empty_values['config'].pop(key)
-        payload_diff, _ = recursive_diff(payload_without_empty_values, self.representation)
+        payload_diff, _ = recursive_diff(payload_without_empty_values, self.initial_representation)
         try:
             config_diff = payload_diff.pop('config')
         except KeyError:
@@ -566,6 +549,17 @@ class FederationGroupMapper(object):
             representation=payload,
         )
         return clean_payload_with_config(payload)
+
+    @property
+    def representation(self):
+        return clean_payload_with_config(
+            get_on_url(
+                url=self._get_mapper_url(),
+                restheaders=self.restheaders,
+                module=self.module,
+                description=self.description,
+            )
+        )
 
 
 def run_module():
@@ -624,81 +618,12 @@ def run_module():
             auth_password=module.params.get('auth_password'),
             client_secret=module.params.get('auth_client_secret'),
         )
-    except KeycloakError as err:
-        module.fail_json(msg=str(err), changed=False, group_mapper={})
-    try:
         federation_group_mapper = FederationGroupMapper(module, connection_header)
-    except KeycloakError as err:
-        module.fail_json(msg=str(err), changed=False, group_mapper={})
-    waited_state = module.params.get('state')
-    try:
-        result = crud_group_mapper(federation_group_mapper, module, waited_state)
+        result = crud_with_instance(federation_group_mapper, 'group_mapper')
     except KeycloakError as err:
         module.fail_json(msg=str(err), changed=False, group_mapper={})
 
     module.exit_json(**result)
-
-
-def crud_group_mapper(federation_group_mapper, module, waited_state):
-    if waited_state == 'absent':
-        if federation_group_mapper.representation:
-            if not module.check_mode:
-                federation_group_mapper.delete()
-            result = {
-                'changed': True,
-                'msg': 'Group mapper {given_id} deleted.'.format(
-                    given_id=federation_group_mapper.given_id
-                ),
-                'group_mapper': {},
-            }
-        else:
-            result = {
-                'changed': False,
-                'msg': 'Group mapper {given_id} does not exist, doing nothing.'.format(
-                    given_id=federation_group_mapper.given_id
-                ),
-                'group_mapper': federation_group_mapper.representation,
-            }
-    else:
-        if federation_group_mapper.representation:
-            if module.check_mode:
-                payload = federation_group_mapper.update(check=True)
-            else:
-                payload = federation_group_mapper.update()
-            if payload:
-                result = {
-                    'msg': to_text(
-                        'Group mapper {given_id} updated.'.format(
-                            given_id=federation_group_mapper.given_id
-                        )
-                    ),
-                    'changed': True,
-                    'group_mapper': payload,
-                }
-            else:
-                result = {
-                    'changed': False,
-                    'msg': '{} group mapper up to date, doing nothing.'.format(
-                        federation_group_mapper.given_id
-                    ),
-                    'group_mapper': federation_group_mapper.representation,
-                }
-        else:
-            if module.check_mode:
-                payload = federation_group_mapper.create(check=True)
-            else:
-                payload = federation_group_mapper.create()
-            result = {
-                'msg': to_text(
-                    'Group mapper {given_id} created.'.format(
-                        given_id=federation_group_mapper.given_id
-                    )
-                ),
-                'changed': True,
-                'group_mapper': payload,
-            }
-
-    return result
 
 
 def main():

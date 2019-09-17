@@ -560,6 +560,7 @@ ldap_federation:
 
 from copy import deepcopy
 from ansible.module_utils._text import to_text
+from ansible.module_utils.identity.keycloak.crud import crud_with_instance
 from ansible.module_utils.identity.keycloak.keycloak import (
     camel,
     keycloak_argument_spec,
@@ -596,6 +597,12 @@ class LdapFederation(LdapFederationBase):
 
     def __init__(self, module, connection_header):
         super(LdapFederation, self).__init__(module, connection_header)
+
+    @property
+    def representation(self):
+        return clean_payload_with_config(
+            self.get_federation(), credential_clean=True
+        )
 
     def delete(self):
         """Delete the federation"""
@@ -636,7 +643,7 @@ class LdapFederation(LdapFederationBase):
 
     def _arguments_update_representation(self):
         clean_payload = clean_payload_with_config(self._create_payload(), credential_clean=False)
-        payload_diff, _ = recursive_diff(clean_payload, self.federation)
+        payload_diff, _ = recursive_diff(clean_payload, self.initial_representation)
         payload_diff.pop('providerId')
         payload_diff.pop('providerType')
         if not payload_diff:
@@ -709,7 +716,7 @@ class LdapFederation(LdapFederationBase):
         works.
         """
         try:
-            trust_store = self.federation['config']['useTruststoreSpi']
+            trust_store = self.initial_representation['config']['useTruststoreSpi']
         except KeyError:
             trust_store = 'ldapsOnly'
         federation_keys = [
@@ -729,7 +736,7 @@ class LdapFederation(LdapFederationBase):
                     payload.update({camel(one_key): trust_store})
                 else:
                     payload.update(
-                        {camel(one_key): self.federation['config'].get(camel(one_key), '')}
+                        {camel(one_key): self.initial_representation['config'].get(camel(one_key), '')}
                     )
         payload.update(extra_arguments)
         test_url = TEST_LDAP_CONNECTION.format(
@@ -805,7 +812,7 @@ class LdapFederation(LdapFederationBase):
                     else:
                         config.update({camel(key).replace('Ldap', 'LDAP'): [value]})
         try:
-            old_configuration = {key: [value] for key, value in self.federation['config'].items()}
+            old_configuration = {key: [value] for key, value in self.initial_representation['config'].items()}
         except KeyError:
             old_configuration = {}
         new_configuration = dict_merge(old_configuration, config)
@@ -965,59 +972,10 @@ def run_module():
             auth_password=module.params.get('auth_password'),
             client_secret=module.params.get('auth_client_secret'),
         )
+        ldap_federation = LdapFederation(module, connection_header)
+        result = crud_with_instance(ldap_federation, 'ldap_federation')
     except KeycloakError as e:
-        module.fail_json(msg=str(e))
-    ldap_federation = LdapFederation(module, connection_header)
-    waited_state = module.params.get('state')
-    result = {}
-    if waited_state == 'absent':
-        if not ldap_federation.federation:
-            result['msg'] = to_text(
-                'Federation {given_id} does not exist, doing nothing.'.format(
-                    given_id=ldap_federation.given_id
-                )
-            )
-            result['changed'] = False
-        else:
-            if not module.check_mode:
-                ldap_federation.delete()
-            result['msg'] = to_text(
-                'Federation {given_id} deleted.'.format(given_id=ldap_federation.given_id)
-            )
-            result['changed'] = True
-        result['ldap_federation'] = {}
-    else:
-        if not ldap_federation.federation:
-            if not module.check_mode:
-                payload = ldap_federation.create()
-            else:
-                payload = ldap_federation.get_result()
-
-            result['msg'] = to_text(
-                'Federation {given_id} created.'.format(given_id=ldap_federation.given_id)
-            )
-            result['changed'] = True
-            result['ldap_federation'] = payload
-        else:
-            if not module.check_mode:
-                payload = ldap_federation.update()
-            else:
-                payload = ldap_federation.update(check=True)
-            if payload:
-                result['msg'] = to_text(
-                    'Federation {given_id} updated.'.format(given_id=ldap_federation.given_id)
-                )
-                result['changed'] = True
-            else:
-                result['msg'] = to_text(
-                    'Federation {given_id} up to date, doing nothing.'.format(
-                        given_id=ldap_federation.given_id
-                    )
-                )
-                result['changed'] = False
-
-            result['ldap_federation'] = payload
-
+        module.fail_json(msg=str(e), changed=False, ldap_federation={})
     module.exit_json(**result)
 
 
