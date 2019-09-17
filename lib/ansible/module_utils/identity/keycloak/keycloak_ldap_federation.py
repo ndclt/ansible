@@ -17,37 +17,32 @@ class LdapFederationBase(object):
     def __init__(self, module, connection_header):
         self.module = module
         self.restheaders = connection_header
-        self.federation = clean_payload_with_config(
+        self.uuid = self.module.params.get('federation_uuid')
+        self.initial_representation = clean_payload_with_config(
             self.get_federation(), credential_clean=False
         )
+        self.description = 'federation {given_id}'.format(given_id=self.given_id)
         try:
-            self.uuid = self.federation['id']
+            self.uuid = self.initial_representation['id']
         except KeyError:
-            self.uuid = ''
+            pass
 
     def _get_federation_url(self):
         """Create the url in order to get the federation from the given argument (uuid or name)
         :return: the url as string
         :rtype: str
         """
-        try:
+        if self.uuid:
             return USER_FEDERATION_BY_UUID_URL.format(
                 url=self.module.params.get('auth_keycloak_url'),
                 realm=quote(self.module.params.get('realm')),
-                uuid=self.uuid,
+                uuid=quote(self.uuid),
             )
-        except AttributeError:
-            if self.module.params.get('federation_id'):
-                return USER_FEDERATION_URL.format(
-                    url=self.module.params.get('auth_keycloak_url'),
-                    realm=quote(self.module.params.get('realm')),
-                    federation_id=quote(self.module.params.get('federation_id')),
-                )
-            return USER_FEDERATION_BY_UUID_URL.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                uuid=quote(self.module.params.get('federation_uuid')),
-            )
+        return USER_FEDERATION_URL.format(
+            url=self.module.params.get('auth_keycloak_url'),
+            realm=quote(self.module.params.get('realm')),
+            federation_id=quote(self.module.params.get('federation_id')),
+        )
 
     def get_federation(self):
         """Get the federation information from keycloak

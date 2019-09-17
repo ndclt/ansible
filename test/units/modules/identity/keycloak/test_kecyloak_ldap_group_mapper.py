@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 import json
@@ -265,7 +266,7 @@ def test_present_group_mapper_without_properties_should_do_nothing(
         given_id = extra_arguments['mapper_name']
     except KeyError:
         given_id = extra_arguments['mapper_uuid']
-    assert ansible_exit_json['msg'] == '{} group mapper up to date, doing nothing.'.format(
+    assert ansible_exit_json['msg'] == 'Group mapper {} up to date, doing nothing.'.format(
         given_id
     )
     assert not ansible_exit_json['changed']
@@ -350,6 +351,10 @@ def test_state_absent_should_delete_existing_mapper(monkeypatch, mock_delete_url
 @pytest.fixture()
 def mock_update_url(mocker):
     existing_federation = deepcopy(CONNECTION_DICT)
+    updated_mapper = deepcopy(MAPPER_DICT)
+    updated_mapper['config']['groups.dn'] = ['ou=Group,dc=NewCompany,dc=io']
+    updated_mapper['config']['groups.ldap.filter'] = ['']
+    updated_mapper['config']['mapped.group.attributes'] = ['']
     existing_federation.update(
         {
             'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=my-company-ldap': create_wrapper(
@@ -365,9 +370,10 @@ def mock_update_url(mocker):
             'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': create_wrapper(
                 json.dumps(MAPPER_DICT)
             ),
-            'http://keycloak.url/auth/admin/realms/master/components/123-123': create_wrapper(
-                json.dumps({})
-            ),
+            'http://keycloak.url/auth/admin/realms/master/components/123-123': [
+                create_wrapper(json.dumps({})),
+                create_wrapper(json.dumps(updated_mapper)),
+            ],
         }
     )
     return mocker.patch(
@@ -421,6 +427,7 @@ def test_state_present_should_update_existing_mapper(monkeypatch, mock_update_ur
         'providerType': 'org.keycloak.storage.ldap.mappers.LDAPStorageMapper',
     }
     assert update_call_arguments == reference_arguments
+    reference_arguments['id'] = '123-123'
     assert ansible_exit_json['group_mapper'] == clean_payload_with_config(reference_arguments)
 
 
@@ -479,6 +486,11 @@ def test_incompatible_arguments_should_fail(
 
 @pytest.fixture()
 def mock_create_url(mocker):
+    created_mapper = deepcopy(MAPPER_DICT)
+    created_mapper['config']['memberof.ldap.attribute'] = ['memberOf']
+    created_mapper['config']['groups.ldap.filter'] = ['']
+    created_mapper['config']['mapped.group.attributes'] = ['']
+    created_mapper.pop('id')
     existing_federation = deepcopy(CONNECTION_DICT)
     existing_federation.update(
         {
@@ -492,9 +504,10 @@ def mock_create_url(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': create_wrapper(
-                json.dumps({})
-            ),
+            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': [
+                create_wrapper(json.dumps({})),
+                create_wrapper(json.dumps(created_mapper)),
+            ],
             'http://keycloak.url/auth/admin/realms/master/components': create_wrapper(
                 json.dumps({})
             ),
@@ -518,7 +531,7 @@ def test_present_state_should_create_absent_mapper(monkeypatch, mock_create_url)
         'realm': 'master',
         'mapper_name': 'group-ldap-mapper1',
         'federation_id': 'my-company-ldap',
-        'groups_dn': 'ou=Group,dc=myCompany,dc=io',
+        'groups_dn': 'ou=Group,dc=my-company,dc=io',
     }
     set_module_args(arguments)
 
@@ -527,7 +540,7 @@ def test_present_state_should_create_absent_mapper(monkeypatch, mock_create_url)
     ansible_exit_json = ansible_stacktrace.value.args[0]
     reference_payload = {
         'config': {
-            'groups.dn': ['ou=Group,dc=myCompany,dc=io'],
+            'groups.dn': ['ou=Group,dc=my-company,dc=io'],
             'group.name.ldap.attribute': ['cn'],
             'group.object.classes': ['groupOfNames'],
             'preserve.group.inheritance': ['true'],
@@ -582,7 +595,9 @@ def mock_does_not_exist_mapper(mocker):
     )
 
 
-def test_absent_state_and_mapper_does_not_exist_should_do_nothing(monkeypatch, mock_does_not_exist_mapper):
+def test_absent_state_and_mapper_does_not_exist_should_do_nothing(
+    monkeypatch, mock_does_not_exist_mapper
+):
     monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
     monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
