@@ -1,0 +1,2 @@
+COMPONENTS_BY_UUID_URL = '{url}/admin/realms/{realm}/components/{uuid}'
+MAPPER_BY_NAME = '{url}/admin/realms/{realm}/components?parent={federation_uuid}&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name={mapper_name}'

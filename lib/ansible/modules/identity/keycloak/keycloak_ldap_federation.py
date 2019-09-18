@@ -574,6 +574,7 @@ from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
     LdapFederationBase,
     COMPONENTS_URL,
 )
+from ansible.module_utils.identity.keycloak.urls import COMPONENTS_BY_UUID_URL
 from ansible.module_utils.identity.keycloak.utils import (
     clean_payload_with_config,
     if_absent_add_a_default_value,
@@ -585,7 +586,6 @@ from ansible.module_utils.six.moves.urllib.parse import quote, urlencode
 from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 USER_FEDERATION_URL = '{url}/admin/realms/{realm}/components?parent={realm}&type=org.keycloak.storage.UserStorageProvider&name={federation_id}'
-USER_FEDERATION_BY_UUID_URL = '{url}/admin/realms/{realm}/components/{uuid}'
 TEST_LDAP_CONNECTION = '{url}/admin/realms/{realm}/testLDAPConnection'
 
 SEARCH_SCOPE = {'one level': 1, 'subtree': 2}
@@ -622,7 +622,7 @@ class LdapFederation(LdapFederationBase):
         federation_payload = self._create_payload()
         if check:
             return clean_payload_with_config(federation_payload)
-        put_url = USER_FEDERATION_BY_UUID_URL.format(
+        put_url = COMPONENTS_BY_UUID_URL.format(
             url=self.module.params.get('auth_keycloak_url'),
             realm=quote(self.module.params.get('realm')),
             uuid=self.uuid,
