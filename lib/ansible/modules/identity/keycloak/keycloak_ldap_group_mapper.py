@@ -31,8 +31,8 @@ options:
   state:
     description:
       - State of the LDAP federation.
-      - On C(present), the group will be created if it does not yet exist, or updated with the parameters you provide.
-      - On C(absent), the group will be removed if it exists.
+      - On C(present), the group mapper will be created if it does not yet exist, or updated with the parameters you provide.
+      - On C(absent), the group mapper will be removed if it exists.
     required: true
     default: present
     type: str
@@ -43,7 +43,7 @@ options:
   realm:
     type: str
     description:
-      - They Keycloak realm under which this LDAP federation resides.
+      - They Keycloak realm under which this LDAP group mapper resides.
     default: 'master'
 
   federation_id:
@@ -338,14 +338,15 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     put_on_url,
     post_on_url,
 )
+from ansible.module_utils.identity.keycloak.urls import (
+    COMPONENTS_BY_UUID_URL,
+    MAPPER_BY_NAME,
+)
 from ansible.module_utils.identity.keycloak.utils import snake_to_point_case, convert_to_bool
 from ansible.module_utils.identity.keycloak.keycloak_ldap_federation import (
     LdapFederationBase,
     COMPONENTS_URL,
 )
-
-GROUP_MAPPER_BY_UUID_URL = '{url}/admin/realms/{realm}/components/{uuid}'
-GROUP_MAPPER_BY_NAME = '{url}/admin/realms/{realm}/components?parent={federation_uuid}&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name={mapper_name}'
 
 USER_GROUP_RETRIEVE_STRATEGY_LABEL = 'user.roles.retrieve.strategy'
 
@@ -371,6 +372,10 @@ class FederationGroupMapper(object):
             self.uuid = self.initial_representation['id']
         except KeyError:
             pass
+        else:
+            if self.initial_representation['providerId'] != 'group-ldap-mapper':
+                raise KeycloakError(
+                    '{given_id} is not a group mapper.'.format(given_id=self.given_id))
 
     @property
     def given_id(self):
@@ -388,12 +393,12 @@ class FederationGroupMapper(object):
         :return: the url as string
         :rtype: str"""
         if self.uuid:
-            return GROUP_MAPPER_BY_UUID_URL.format(
+            return COMPONENTS_BY_UUID_URL.format(
                 url=self.module.params.get('auth_keycloak_url'),
                 realm=quote(self.module.params.get('realm')),
                 uuid=quote(self.uuid),
             )
-        return GROUP_MAPPER_BY_NAME.format(
+        return MAPPER_BY_NAME.format(
             url=self.module.params.get('auth_keycloak_url'),
             realm=quote(self.module.params.get('realm')),
             mapper_name=quote(self.module.params.get('mapper_name').lower()),
@@ -499,7 +504,7 @@ class FederationGroupMapper(object):
         else:
             if ldap_filter[0] != '(' and ldap_filter[-1] != ')':
                 raise KeycloakError(
-                    'LDAP filter should begin with a opening bracket and end with closing braket.'
+                    'LDAP filter should begin with a opening bracket and end with closing bracket.'
                 )
 
     def delete(self):

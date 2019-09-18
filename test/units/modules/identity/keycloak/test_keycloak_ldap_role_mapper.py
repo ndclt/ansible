@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+from ansible.module_utils.identity.keycloak.utils import clean_payload_with_config
+
 __metaclass__ = type
+
+from ansible.module_utils.six import StringIO
 
 import json
 from copy import deepcopy
 from itertools import count
 
 import pytest
-from ansible.module_utils.identity.keycloak.utils import clean_payload_with_config
-from ansible.modules.identity.keycloak import keycloak_ldap_group_mapper
-from ansible.module_utils.six import StringIO
 from units.modules.utils import (
     AnsibleExitJson,
     AnsibleFailJson,
@@ -18,31 +19,30 @@ from units.modules.utils import (
     exit_json,
     set_module_args,
 )
+from ansible.modules.identity.keycloak import keycloak_ldap_role_mapper
 
 MAPPER_DICT = {
-    'config': {
-        'groups.dn': ['ou=Group,dc=my-company,dc=io'],
-        'group.name.ldap.attribute': ['cn'],
-        'group.object.classes': ['groupOfNames'],
-        'preserve.group.inheritance': ['true'],
-        'ignore.missing.groups': ['false'],
-        'membership.ldap.attribute': ['member'],
-        'membership.attribute.type': ['DN'],
-        'membership.user.ldap.attribute': ['cn'],
-        'mode': ['LDAP_ONLY'],
-        'user.roles.retrieve.strategy': ['LOAD_GROUPS_BY_MEMBER_ATTRIBUTE'],
-        'memberof.ldap.attribute': [''],
-        'drop.non.existing.groups.during.sync': ['false'],
-    },
-    'name': 'group-ldap-mapper1',
-    'providerId': 'group-ldap-mapper',
+    'id': '123-123',
+    'name': 'role-ldap-mapper1',
+    'providerId': 'role-ldap-mapper',
     'providerType': 'org.keycloak.storage.ldap.mappers.LDAPStorageMapper',
     'parentId': '456-456',
-    'id': '123-123',
+    'config': {
+        'mode': ['LDAP_ONLY'],
+        'membership.attribute.type': ['DN'],
+        'user.roles.retrieve.strategy': ['LOAD_ROLES_BY_MEMBER_ATTRIBUTE'],
+        'roles.dn': ['ou=oneRole,dc=my-company'],
+        'membership.user.ldap.attribute': ['cn'],
+        'membership.ldap.attribute': ['member'],
+        'role.name.ldap.attribute': ['cn'],
+        'memberof.ldap.attribute': ['memberOf'],
+        'use.realm.roles.mapping': ['true'],
+        'role.object.classes': ['groupOfNames'],
+    },
 }
 
-WRONG_TYPE_MAPPER = deepcopy(MAPPER_DICT)
-WRONG_TYPE_MAPPER.update({'providerId': 'role-ldap-mapper'})
+WRONG_TYPE_MAPPER_DICT = deepcopy(MAPPER_DICT)
+WRONG_TYPE_MAPPER_DICT.update({'providerId': 'group-ldap-mapper'})
 
 
 def create_wrapper(text_as_string):
@@ -89,8 +89,8 @@ def get_response(object_with_future_response, method, get_id_call_count):
 
 
 def test_mapper_name_without_federation_id_should_fail(monkeypatch):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -102,14 +102,14 @@ def test_mapper_name_without_federation_id_should_fail(monkeypatch):
     set_module_args(arguments)
 
     with pytest.raises(AnsibleFailJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert (
         ansible_exit_json['msg']
         == 'With mapper name, the federation_id or federation_uuid must be given.'
     )
     assert not ansible_exit_json['changed']
-    assert not ansible_exit_json['group_mapper']
+    assert not ansible_exit_json['role_mapper']
 
 
 @pytest.fixture
@@ -130,8 +130,8 @@ def mock_absent_federation_url(mocker):
 
 
 def test_federation_does_not_exist_fail(monkeypatch, mock_absent_federation_url):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -144,14 +144,14 @@ def test_federation_does_not_exist_fail(monkeypatch, mock_absent_federation_url)
     set_module_args(arguments)
 
     with pytest.raises(AnsibleFailJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert (
         ansible_exit_json['msg']
         == 'Cannot access mapper because does-not-exist federation does not exist.'
     )
     assert not ansible_exit_json['changed']
-    assert not ansible_exit_json['group_mapper']
+    assert not ansible_exit_json['role_mapper']
 
 
 @pytest.fixture()
@@ -169,8 +169,8 @@ def mock_wrong_type(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': create_wrapper(
-                json.dumps(WRONG_TYPE_MAPPER)
+            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=role-ldap-mapper1': create_wrapper(
+                json.dumps(WRONG_TYPE_MAPPER_DICT)
             ),
         }
     )
@@ -182,8 +182,8 @@ def mock_wrong_type(mocker):
 
 
 def test_good_name_but_wrong_type_should_raise_an_error(monkeypatch, mock_wrong_type):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -191,19 +191,16 @@ def test_good_name_but_wrong_type_should_raise_an_error(monkeypatch, mock_wrong_
         'auth_realm': 'master',
         'realm': 'master',
         'federation_id': 'my-company-ldap',
-        'mapper_name': 'group-ldap-mapper1',
+        'mapper_name': 'role-ldap-mapper1',
     }
     set_module_args(arguments)
 
     with pytest.raises(AnsibleFailJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
-    assert (
-            ansible_exit_json['msg']
-            == 'group-ldap-mapper1 is not a group mapper.'
-    )
+    assert ansible_exit_json['msg'] == 'role-ldap-mapper1 is not a role mapper.'
     assert not ansible_exit_json['changed']
-    assert not ansible_exit_json['group_mapper']
+    assert not ansible_exit_json['role_mapper']
 
 
 @pytest.fixture()
@@ -221,7 +218,7 @@ def mock_existing_mapper(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': create_wrapper(
+            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=role-ldap-mapper1': create_wrapper(
                 json.dumps(MAPPER_DICT)
             ),
             'http://keycloak.url/auth/admin/realms/master/components/123-123': create_wrapper(
@@ -239,7 +236,7 @@ def mock_existing_mapper(mocker):
 @pytest.mark.parametrize(
     'extra_arguments',
     [
-        {'mapper_name': 'group-ldap-mapper1', 'federation_id': 'my-company-ldap'},
+        {'mapper_name': 'role-ldap-mapper1', 'federation_id': 'my-company-ldap'},
         {'mapper_uuid': '123-123'},
     ],
     ids=['mapper and federation names', 'mapper uuid'],
@@ -247,8 +244,8 @@ def mock_existing_mapper(mocker):
 def test_present_group_mapper_without_properties_should_do_nothing(
     monkeypatch, extra_arguments, mock_existing_mapper
 ):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -260,35 +257,31 @@ def test_present_group_mapper_without_properties_should_do_nothing(
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
     try:
         given_id = extra_arguments['mapper_name']
     except KeyError:
         given_id = extra_arguments['mapper_uuid']
-    assert ansible_exit_json['msg'] == 'Group mapper {} up to date, doing nothing.'.format(
-        given_id
-    )
+    assert ansible_exit_json['msg'] == 'Role mapper {} up to date, doing nothing.'.format(given_id)
     assert not ansible_exit_json['changed']
-    assert ansible_exit_json['group_mapper'] == {
-        'name': 'group-ldap-mapper1',
-        'providerId': 'group-ldap-mapper',
+    assert ansible_exit_json['role_mapper'] == {
+        'id': '123-123',
+        'name': 'role-ldap-mapper1',
+        'providerId': 'role-ldap-mapper',
         'providerType': 'org.keycloak.storage.ldap.mappers.LDAPStorageMapper',
         'parentId': '456-456',
-        'id': '123-123',
         'config': {
-            'groups.dn': 'ou=Group,dc=my-company,dc=io',
-            'group.name.ldap.attribute': 'cn',
-            'group.object.classes': 'groupOfNames',
-            'preserve.group.inheritance': 'true',
-            'ignore.missing.groups': 'false',
-            'membership.ldap.attribute': 'member',
-            'membership.attribute.type': 'DN',
-            'membership.user.ldap.attribute': 'cn',
             'mode': 'LDAP_ONLY',
-            'user.roles.retrieve.strategy': 'LOAD_GROUPS_BY_MEMBER_ATTRIBUTE',
-            'memberof.ldap.attribute': '',
-            'drop.non.existing.groups.during.sync': 'false',
+            'membership.attribute.type': 'DN',
+            'user.roles.retrieve.strategy': 'LOAD_ROLES_BY_MEMBER_ATTRIBUTE',
+            'roles.dn': 'ou=oneRole,dc=my-company',
+            'membership.user.ldap.attribute': 'cn',
+            'membership.ldap.attribute': 'member',
+            'role.name.ldap.attribute': 'cn',
+            'memberof.ldap.attribute': 'memberOf',
+            'use.realm.roles.mapping': 'true',
+            'role.object.classes': 'groupOfNames',
         },
     }
 
@@ -308,7 +301,7 @@ def mock_delete_url(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': create_wrapper(
+            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=role-ldap-mapper1': create_wrapper(
                 json.dumps(MAPPER_DICT)
             ),
             'http://keycloak.url/auth/admin/realms/master/components/123-123': create_wrapper(
@@ -324,26 +317,26 @@ def mock_delete_url(mocker):
 
 
 def test_state_absent_should_delete_existing_mapper(monkeypatch, mock_delete_url):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
-        'mapper_name': 'group-ldap-mapper1',
+        'mapper_name': 'role-ldap-mapper1',
         'federation_id': 'my-company-ldap',
         'state': 'absent',
     }
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
-    assert ansible_exit_json['msg'] == 'Group mapper group-ldap-mapper1 deleted.'
+    assert ansible_exit_json['msg'] == 'Role mapper role-ldap-mapper1 deleted.'
     assert ansible_exit_json['changed']
-    assert not ansible_exit_json['group_mapper']
+    assert not ansible_exit_json['role_mapper']
     delete_call = mock_delete_url.mock_calls[3]
     assert delete_call[2]['method'] == 'DELETE'
 
@@ -352,9 +345,21 @@ def test_state_absent_should_delete_existing_mapper(monkeypatch, mock_delete_url
 def mock_update_url(mocker):
     existing_federation = deepcopy(CONNECTION_DICT)
     updated_mapper = deepcopy(MAPPER_DICT)
-    updated_mapper['config']['groups.dn'] = ['ou=Group,dc=NewCompany,dc=io']
-    updated_mapper['config']['groups.ldap.filter'] = ['']
-    updated_mapper['config']['mapped.group.attributes'] = ['']
+    updated_mapper['config']['roles.dn'] = ['ou=Role,dc=NewCompany,dc=io']
+    updated_mapper['config']['role.name.ldap.attribute'] = ['bn']
+    updated_mapper['config']['role.object.classes'] = ['Plop,Glop']
+    updated_mapper['config']['membership.ldap.attribute'] = ['InvisibleMember']
+    updated_mapper['config']['membership.attribute.type'] = ['UID']
+    updated_mapper['config']['membership.user.ldap.attribute'] = ['bn']
+    updated_mapper['config']['roles.ldap.filter'] = ['(abc)']
+    updated_mapper['config']['mode'] = ['READ_ONLY']
+    updated_mapper['config']['user.roles.retrieve.strategy'] = [
+        'LOAD_ROLES_BY_MEMBER_ATTRIBUTE_RECURSIVELY'
+    ]
+    updated_mapper['config']['memberof.ldap.attribute'] = ['InvisibleMemberOf']
+    updated_mapper['config']['use.realm.roles.mapping'] = ['true']
+    updated_mapper['config']['client.id'] = ['']
+    updated_mapper['id'] = '123-123'
     existing_federation.update(
         {
             'http://keycloak.url/auth/admin/realms/master/components?parent=master&type=org.keycloak.storage.UserStorageProvider&name=my-company-ldap': create_wrapper(
@@ -367,13 +372,19 @@ def mock_update_url(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': create_wrapper(
+            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=role-ldap-mapper1': create_wrapper(
                 json.dumps(MAPPER_DICT)
             ),
             'http://keycloak.url/auth/admin/realms/master/components/123-123': [
                 create_wrapper(json.dumps({})),
                 create_wrapper(json.dumps(updated_mapper)),
             ],
+            'http://keycloak.url/auth/admin/realms/master/clients': create_wrapper(
+                json.dumps(
+                    # This is not the full return dictionary, there is only the used key.
+                    [{'clientId': 'admin-cli'}, {'clientId': 'broker'}, {'clientId': 'account'}]
+                )
+            ),
         }
     )
     return mocker.patch(
@@ -384,113 +395,105 @@ def mock_update_url(mocker):
 
 
 def test_state_present_should_update_existing_mapper(monkeypatch, mock_update_url):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
-        'mapper_name': 'group-ldap-mapper1',
+        'mapper_name': 'role-ldap-mapper1',
         'federation_id': 'my-company-ldap',
-        'groups_dn': 'ou=Group,dc=NewCompany,dc=io',
+        'roles_dn': 'ou=Role,dc=NewCompany,dc=io',
+        'role_name_ldap_attribute': 'bn',
+        'role_object_classes': ['Plop', 'Glop'],
+        'membership_ldap_attribute': 'InvisibleMember',
+        'membership_attribute_type': 'UID',
+        'membership_user_ldap_attribute': 'bn',
+        'roles_ldap_filter': '(abc)',
+        'mode': 'READ_ONLY',
+        'user_roles_retrieve_strategy': 'LOAD_ROLES_BY_MEMBER_ATTRIBUTE_RECURSIVELY',
+        'memberof_ldap_attribute': 'InvisibleMemberOf',
+        'use_realm_roles_mapping': True,
+        'client_id': '',
     }
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
-    assert ansible_exit_json['msg'] == 'Group mapper group-ldap-mapper1 updated.'
+    assert ansible_exit_json['msg'] == 'Role mapper role-ldap-mapper1 updated.'
     assert ansible_exit_json['changed']
-    update_call_arguments = json.loads(mock_update_url.mock_calls[3][2]['data'])
+    update_call_arguments = json.loads(mock_update_url.mock_calls[5][2]['data'])
     reference_arguments = {
-        'config': {
-            'groups.dn': ['ou=Group,dc=NewCompany,dc=io'],
-            'group.name.ldap.attribute': ['cn'],
-            'group.object.classes': ['groupOfNames'],
-            'preserve.group.inheritance': ['true'],
-            'groups.ldap.filter': [''],
-            'ignore.missing.groups': ['false'],
-            'mapped.group.attributes': [''],
-            'membership.ldap.attribute': ['member'],
-            'membership.attribute.type': ['DN'],
-            'membership.user.ldap.attribute': ['cn'],
-            'mode': ['LDAP_ONLY'],
-            'user.roles.retrieve.strategy': ['LOAD_GROUPS_BY_MEMBER_ATTRIBUTE'],
-            'memberof.ldap.attribute': [''],
-            'drop.non.existing.groups.during.sync': ['false'],
-        },
-        'name': 'group-ldap-mapper1',
-        'providerId': 'group-ldap-mapper',
-        'parentId': '456-456',
+        'name': 'role-ldap-mapper1',
+        'providerId': 'role-ldap-mapper',
         'providerType': 'org.keycloak.storage.ldap.mappers.LDAPStorageMapper',
+        'parentId': '456-456',
+        'config': {
+            'roles.dn': ['ou=Role,dc=NewCompany,dc=io'],
+            'role.name.ldap.attribute': ['bn'],
+            'role.object.classes': ['Plop,Glop'],
+            'membership.ldap.attribute': ['InvisibleMember'],
+            'membership.attribute.type': ['UID'],
+            'membership.user.ldap.attribute': ['bn'],
+            'roles.ldap.filter': ['(abc)'],
+            'mode': ['READ_ONLY'],
+            'user.roles.retrieve.strategy': ['LOAD_ROLES_BY_MEMBER_ATTRIBUTE_RECURSIVELY'],
+            'memberof.ldap.attribute': ['InvisibleMemberOf'],
+            'use.realm.roles.mapping': [True],
+            'client.id': [''],
+        },
     }
     assert update_call_arguments == reference_arguments
     reference_arguments['id'] = '123-123'
-    assert ansible_exit_json['group_mapper'] == clean_payload_with_config(reference_arguments)
+    reference_arguments['config']['use.realm.roles.mapping'] = ['true']
+    assert ansible_exit_json['role_mapper'] == clean_payload_with_config(reference_arguments)
 
 
 @pytest.mark.parametrize(
     'extra_arguments, waited_error',
     [
         (
-            {'preserve_group_inheritance': 'yes', 'membership_attribute_type': 'UID'},
-            'Not possible to preserve group inheritance and use UID membership type together.',
-        ),
-        (
-            {
-                'member_of_ldap_attribute': 'plop',
-                'user_groups_retrieve_strategy': 'LOAD_GROUPS_BY_MEMBER_ATTRIBUTE',
-            },
-            (
-                'member of ldap attribute is only useful when user groups strategy is get groups '
-                'from user member of attribute.'
-            ),
-        ),
-        (
-            {'groups_ldap_filter': 'without parenthesis'},
+            {'roles_ldap_filter': 'without parenthesis'},
             'LDAP filter should begin with a opening bracket and end with closing bracket.',
         ),
+        (
+            {'client_id': 'does-not-exist-in-realm'},
+            'Client does-not-exist-in-realm does not exist in the realm and cannot be used.',
+        ),
     ],
-    ids=[
-        'inheritance and membership attribute type',
-        'retrieve strategy and member of ldap attribute',
-        'LDAP filter checks',
-    ],
+    ids=['LDAP filter checks', 'Client does not exist'],
 )
 def test_incompatible_arguments_should_fail(
     monkeypatch, mock_update_url, extra_arguments, waited_error
 ):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
-        'mapper_name': 'group-ldap-mapper1',
+        'mapper_name': 'role-ldap-mapper1',
         'federation_id': 'my-company-ldap',
     }
     arguments.update(extra_arguments)
     set_module_args(arguments)
 
     with pytest.raises(AnsibleFailJson) as exec_error:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = exec_error.value.args[0]
     assert not ansible_exit_json['changed']
-    assert not ansible_exit_json['group_mapper']
+    assert not ansible_exit_json['role_mapper']
     assert ansible_exit_json['msg'] == waited_error
 
 
 @pytest.fixture()
 def mock_create_url(mocker):
     created_mapper = deepcopy(MAPPER_DICT)
-    created_mapper['config']['memberof.ldap.attribute'] = ['memberOf']
-    created_mapper['config']['groups.ldap.filter'] = ['']
-    created_mapper['config']['mapped.group.attributes'] = ['']
-    created_mapper.pop('id')
     existing_federation = deepcopy(CONNECTION_DICT)
     existing_federation.update(
         {
@@ -504,7 +507,7 @@ def mock_create_url(mocker):
                     }
                 )
             ),
-            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=group-ldap-mapper1': [
+            'http://keycloak.url/auth/admin/realms/master/components?parent=456-456&type=org.keycloak.storage.ldap.mappers.LDAPStorageMapper&name=role-ldap-mapper1': [
                 create_wrapper(json.dumps({})),
                 create_wrapper(json.dumps(created_mapper)),
             ],
@@ -521,55 +524,74 @@ def mock_create_url(mocker):
 
 
 def test_present_state_should_create_absent_mapper(monkeypatch, mock_create_url):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
         'auth_password': 'admin_password',
         'auth_realm': 'master',
         'realm': 'master',
-        'mapper_name': 'group-ldap-mapper1',
+        'mapper_name': 'role-ldap-mapper1',
         'federation_id': 'my-company-ldap',
-        'groups_dn': 'ou=Group,dc=my-company,dc=io',
+        'roles_dn': 'ou=oneRole,dc=my-company',
     }
     set_module_args(arguments)
 
     with pytest.raises(AnsibleExitJson) as ansible_stacktrace:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = ansible_stacktrace.value.args[0]
     reference_payload = {
         'config': {
-            'groups.dn': ['ou=Group,dc=my-company,dc=io'],
-            'group.name.ldap.attribute': ['cn'],
-            'group.object.classes': ['groupOfNames'],
-            'preserve.group.inheritance': ['true'],
-            'ignore.missing.groups': ['false'],
+            'roles.dn': ['ou=oneRole,dc=my-company'],
+            'role.name.ldap.attribute': ['cn'],
+            'role.object.classes': ['groupOfNames'],
             'membership.ldap.attribute': ['member'],
             'membership.attribute.type': ['DN'],
             'membership.user.ldap.attribute': ['cn'],
-            'groups.ldap.filter': [''],
             'mode': ['LDAP_ONLY'],
-            'user.roles.retrieve.strategy': ['LOAD_GROUPS_BY_MEMBER_ATTRIBUTE'],
+            'user.roles.retrieve.strategy': ['LOAD_ROLES_BY_MEMBER_ATTRIBUTE'],
             'memberof.ldap.attribute': ['memberOf'],
-            'mapped.group.attributes': [''],
-            'drop.non.existing.groups.during.sync': ['false'],
+            'use.realm.roles.mapping': ['true'],
         },
-        'name': 'group-ldap-mapper1',
-        'providerId': 'group-ldap-mapper',
+        'name': 'role-ldap-mapper1',
+        'providerId': 'role-ldap-mapper',
         'providerType': 'org.keycloak.storage.ldap.mappers.LDAPStorageMapper',
         'parentId': '456-456',
     }
 
-    assert ansible_exit_json['msg'] == 'Group mapper group-ldap-mapper1 created.'
+    assert ansible_exit_json['msg'] == 'Role mapper role-ldap-mapper1 created.'
     assert ansible_exit_json['changed']
-    assert ansible_exit_json['group_mapper'] == clean_payload_with_config(reference_payload)
+    reference_state = clean_payload_with_config(reference_payload)
+    reference_state['id'] = '123-123'
+    assert ansible_exit_json['role_mapper'] == reference_state
     create_call_arguments = json.loads(mock_create_url.mock_calls[3][2]['data'])
     assert create_call_arguments == reference_payload
 
 
+def test_missing_mandatory_arguments_should_raise_an_error(mock_create_url, monkeypatch):
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
+    arguments = {
+        'auth_keycloak_url': 'http://keycloak.url/auth',
+        'auth_username': 'test_admin',
+        'auth_password': 'admin_password',
+        'auth_realm': 'master',
+        'realm': 'master',
+        'mapper_name': 'role-ldap-mapper1',
+        'federation_id': 'my-company-ldap',
+    }
+    set_module_args(arguments)
+    with pytest.raises(AnsibleFailJson) as ansible_stacktrace:
+        keycloak_ldap_role_mapper.run_module()
+    ansible_exit_json = ansible_stacktrace.value.args[0]
+    assert ansible_exit_json['msg'] == 'roles_dn is mandatory for role mapper creation.'
+    assert not ansible_exit_json['changed']
+    assert ansible_exit_json['role_mapper'] == {}
+
+
 @pytest.fixture()
-def mock_does_not_exist_mapper(mocker):
+def mock_does_not_exist_url(mocker):
     existing_federation = deepcopy(CONNECTION_DICT)
     existing_federation.update(
         {
@@ -596,10 +618,10 @@ def mock_does_not_exist_mapper(mocker):
 
 
 def test_absent_state_and_mapper_does_not_exist_should_do_nothing(
-    monkeypatch, mock_does_not_exist_mapper
+    monkeypatch, mock_does_not_exist_url
 ):
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'exit_json', exit_json)
-    monkeypatch.setattr(keycloak_ldap_group_mapper.AnsibleModule, 'fail_json', fail_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_ldap_role_mapper.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -612,8 +634,8 @@ def test_absent_state_and_mapper_does_not_exist_should_do_nothing(
     }
     set_module_args(arguments)
     with pytest.raises(AnsibleExitJson) as ansible_stacktrace:
-        keycloak_ldap_group_mapper.run_module()
+        keycloak_ldap_role_mapper.run_module()
     ansible_exit_json = ansible_stacktrace.value.args[0]
-    assert ansible_exit_json['msg'] == 'Group mapper does-not-exist does not exist, doing nothing.'
+    assert ansible_exit_json['msg'] == 'Role mapper does-not-exist does not exist, doing nothing.'
     assert not ansible_exit_json['changed']
-    assert not ansible_exit_json['group_mapper']
+    assert ansible_exit_json['role_mapper'] == {}
