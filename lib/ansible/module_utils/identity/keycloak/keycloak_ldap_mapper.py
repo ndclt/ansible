@@ -23,7 +23,7 @@ from ansible.module_utils.identity.keycloak.utils import clean_payload_with_conf
 
 from ansible.module_utils.six.moves.urllib.parse import quote
 
-WAITED_PROVIDER_ID = {'role': 'role-ldap-mapper', 'group': 'group-ldap-mapper'}
+WAITED_PROVIDER_ID = {'role': 'role-ldap-mapper', 'group': 'group-ldap-mapper', 'user attributes': 'user-attribute-ldap-mapper'}
 
 
 class FederationMapper(object):
@@ -111,7 +111,7 @@ class FederationMapper(object):
         clean_payload = clean_payload_with_config(self._create_payload(), credential_clean=False)
         payload_without_empty_values = deepcopy(clean_payload)
         for key, value in clean_payload['config'].items():
-            if not value:
+            if not isinstance(value, bool) and not value:
                 payload_without_empty_values['config'].pop(key)
         payload_diff, _ = recursive_diff(payload_without_empty_values, self.initial_representation)
         try:
