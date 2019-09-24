@@ -23,7 +23,12 @@ from ansible.module_utils.identity.keycloak.utils import clean_payload_with_conf
 
 from ansible.module_utils.six.moves.urllib.parse import quote
 
-WAITED_PROVIDER_ID = {'role': 'role-ldap-mapper', 'group': 'group-ldap-mapper', 'user attributes': 'user-attribute-ldap-mapper'}
+WAITED_PROVIDER_ID = {
+    'role': 'role-ldap-mapper',
+    'group': 'group-ldap-mapper',
+    'user attributes': 'user-attribute-ldap-mapper',
+    'full name': 'full-name-ldap-mapper',
+}
 
 
 class FederationMapper(object):
