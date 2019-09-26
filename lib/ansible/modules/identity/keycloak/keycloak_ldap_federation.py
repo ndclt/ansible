@@ -157,12 +157,6 @@ options:
     type: str
     aliases: [ editMode ]
 
-  import_enable:
-    description:
-      - Whether to import the user from the LDAP into the Keycloak databases
-    type: bool
-    aliases: [ importEnable ]
-
   synchronize_registrations:
     description:
       - Should new user in the Keycloak be created within the LDAP
@@ -252,8 +246,10 @@ notes:
     this module, I(importUser), I(connectionPooling) (and all associated parameters),
     I(allowKerberosAuthentication) (and all associated parameters),
     I(useKerberosForPasswordAuthentication), I(batchSize) and I(cachePolicy).
-  - The created federation will always be enabled. Adding this parameter in the payload bring 
-    keycloak about making weird things (some parameters are not updated anymore).
+  - The created federation will always be enabled. Adding this parameter in the payload brings 
+    keycloak making weird things (some parameters are not updated anymore).
+  - The created federation will always have the import user to true. Adding this parameter in the
+    payload brings keycloak making weird things (some parameters are not updated anymore).
 
 extends_documentation_fragment:
   - keycloak
@@ -887,7 +883,6 @@ def run_module():
         edit_mode=dict(
             type='str', choices=['READ_ONLY', 'UNSYNCED', 'WRITABLE'], aliases=['editMode']
         ),
-        import_enable=dict(type='bool', aliases=['importEnable']),
         username_ldap_attribute=dict(
             type='str',
             aliases=['usernameLDAPAttribute', 'username_LDAP_attribute', 'usernameLdapAttribute'],
