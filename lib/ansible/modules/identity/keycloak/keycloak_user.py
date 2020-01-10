@@ -15,7 +15,7 @@ module: keycloak_user
 
 short_description: Allows administration of Keycloak users via Keycloak API
 
-version_added: "2.10"
+version_added: "2.11"
 
 description:
     - This module allows the administration of Keycloak clients via the Keycloak REST API. It
@@ -113,13 +113,10 @@ options:
             - the user last name
         aliases: [ lastName ]
         type: str
-
+    
     user_password:
         description:
             - the password set to the user
-            - this value is not given by the Keycloak API when requesting the user. When given, it 
-              reset the user password with the given one and put the C(changed) to True
-        aliases: [ userPassword ]
         type: str
 
 extends_documentation_fragment:
@@ -163,7 +160,7 @@ EXAMPLES = '''
     last_name: test
     required_actions: [ UPDATE_PROFILE, CONFIGURE_TOTP ]
     attributes: {'one key': 'one value', 'another key': 42}
-    user_password: userTest1secret
+    credentials: {'type': 'password', 'value': 'userTest1secret'}
 '''
 
 RETURN = '''
@@ -173,14 +170,26 @@ msg:
   type: str
   sample: "User usertest1 has been updated"
 
-changed:
-    description: whether the user state has changed
+proposed:
+    description: user representation of proposed changes to user
     returned: always
-    type: bool
-    sample: True
+    type: dict
+    sample: {
+      "email": "userTest1@domain.org",
+      "attributes": {"onekey": "RS256"}
     }
-user:
-    description: user representation the user at the end of the moudel (sample is truncated)
+existing:
+    description: client representation of existing client (sample is truncated)
+    returned: always
+    type: dict
+    sample: {
+        "enabled": false,
+        "attributes": {
+            "onekey": ["RS256"],
+        }
+    }
+end_state:
+    description: client representation of client after module execution (sample is truncated)
     returned: always
     type: dict
     sample: {
@@ -209,7 +218,6 @@ from ansible.module_utils.basic import AnsibleModule
 
 URL_USERS = "{url}/admin/realms/{realm}/users"
 URL_USER = "{url}/admin/realms/{realm}/users/{id}"
-URL_FOR_PASSWORD = "{url}/admin/realms/{realm}/users/{id}/reset-password"
 AUTHORIZED_REQUIRED_ACTIONS = [
     'CONFIGURE_TOTP',
     'UPDATE_PASSWORD',
@@ -287,7 +295,7 @@ class KeycloakUser(object):
             url=self._get_user_url(),
             restheaders=self.restheaders,
             module=self.module,
-            description='user {given_id}'.format(given_id=self.given_id),
+            description='user {}'.format(self.given_id),
         )
         if json_user:
             if self.uuid:
@@ -326,37 +334,11 @@ class KeycloakUser(object):
         if check:
             return payload
         put_on_url(self._get_user_url(), self.restheaders, self.module, self.description, payload)
-        if self.module.params.get('user_password'):
-            self._set_new_password()
         return payload
 
-    def _set_new_password(self, user_id=''):
-        password_payload = {
-            "type": "password",
-            "value": self.module.params.get('user_password'),
-            "temporary": False,
-        }
-        if not user_id:
-            uuid = self.uuid
-        else:
-            uuid = user_id
-        put_on_url(
-            url=URL_FOR_PASSWORD.format(
-                url=self.module.params.get('auth_keycloak_url'),
-                realm=quote(self.module.params.get('realm')),
-                id=quote(uuid),
-            ),
-            restheaders=self.restheaders,
-            module=self.module,
-            description=self.description,
-            representation=password_payload,
-        )
-
     def _arguments_update_representation(self):
-        if self.module.params.get('user_password'):
-            return True
         clean_payload = self._create_payload()
-        payload_diff, not_used = recursive_diff(clean_payload, self.initial_representation)
+        payload_diff, _ = recursive_diff(clean_payload, self.initial_representation)
         if not payload_diff:
             return False
         return True
@@ -378,9 +360,6 @@ class KeycloakUser(object):
         post_on_url(
             post_url, self.restheaders, self.module, 'user %s' % self.given_id, user_payload,
         )
-        if self.module.params.get('user_password'):
-            user_id = self.representation['id']
-            self._set_new_password(user_id)
         return user_payload
 
     def _create_payload(self):
@@ -405,8 +384,6 @@ class KeycloakUser(object):
                 new_param_value = new_attributes
             if user_param == 'user_id':
                 payload['id'] = new_param_value
-            elif user_param == 'keycloak_username':
-                payload['username'] = new_param_value
             else:
                 payload[camel(user_param)] = new_param_value
         new_payload = dict_merge(self.initial_representation, payload)
