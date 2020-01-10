@@ -1008,4 +1008,3 @@ class KeycloakAPI(object):
 
         except Exception as e:
             self.module.fail_json(msg="Unable to delete group %s: %s" % (groupid, str(e)))
-
