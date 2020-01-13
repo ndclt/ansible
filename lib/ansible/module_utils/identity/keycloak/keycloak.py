@@ -1008,3 +1008,14 @@ class KeycloakAPI(object):
 
         except Exception as e:
             self.module.fail_json(msg="Unable to delete group %s: %s" % (groupid, str(e)))
+
+    def get_json_from_url(self, url):
+        try:
+            user_json = json.load(open_url(url, method='GET', headers=self.restheaders,
+                                           validate_certs=self.validate_certs))
+            return user_json
+        except ValueError as e:
+            self.module.fail_json(msg='API returned incorrect JSON when trying to get: %s' % (url))
+        except Exception as e:
+            self.module.fail_json(msg='Could not obtain url: %s' % (url))
+
