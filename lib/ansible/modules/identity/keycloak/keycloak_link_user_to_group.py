@@ -138,6 +138,9 @@ from ansible.module_utils.identity.keycloak.keycloak import (
     delete_on_url,
     KeycloakError,
 )
+
+# Some of the KeycloakUser should be in module_utils but it will wait the merge of the user
+from ansible.modules.identity.keycloak.keycloak_user import KeycloakUser
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils._text import to_text
 
@@ -166,9 +169,7 @@ class KeycloakLinkUserToGroup(object):
         self._group_id, self.given_group = self._get_group_id(
             module, exclusive_arguments, old_module
         )
-        self._user_id, self.given_user = self._get_user_id(
-            module, exclusive_arguments, old_module
-        )
+        self._user_id, self.given_user = self._get_user_id(module, connection_header)
         self._user_groups_id = []
         self._list_group_for_users()
 
@@ -187,18 +188,11 @@ class KeycloakLinkUserToGroup(object):
             module.fail_json(msg='Group %s does not exist' % value)
 
     @staticmethod
-    def _get_user_id(module, exclusive_arguments, old_module):
-        realm = module.params.get('realm')
-        if 'keycloak_username' in list(exclusive_arguments.keys()):
-            value = exclusive_arguments['keycloak_username']
-            user = old_module.get_user_by_name(value, realm)
-        else:
-            value = exclusive_arguments['user_id']
-            user = old_module.get_user_by_id(value, realm)
-        try:
-            return user['id'], value
-        except TypeError:
-            module.fail_json(msg='User %s does not exist' % value)
+    def _get_user_id(module, connection_header):
+        user = KeycloakUser(module, connection_header)
+        if user.uuid is None or not user.initial_representation:
+            module.fail_json(msg='User %s does not exist' % user.given_id)
+        return user.uuid, user.given_id
 
     def _list_group_for_users(self):
         url = LIST_GROUP_OF_USER_URL.format(
@@ -207,10 +201,7 @@ class KeycloakLinkUserToGroup(object):
             id=self._user_id,
         )
         group_response = get_on_url(
-            url=url,
-            restheaders=self.restheader,
-            module=self.module,
-            description='groups of user',
+            url=url, restheaders=self.restheader, module=self.module, description='groups of user',
         )
         self._user_groups_id = [one_group['id'] for one_group in group_response]
 
@@ -231,10 +222,7 @@ class KeycloakLinkUserToGroup(object):
             group_name=self.module.params.get('group_name'),
         )
         put_on_url(
-            url=url,
-            restheaders=self.restheader,
-            module=self.module,
-            description=description,
+            url=url, restheaders=self.restheader, module=self.module, description=description,
         )
 
     def delete_link(self):
@@ -249,19 +237,14 @@ class KeycloakLinkUserToGroup(object):
             group_name=self.module.params.get('group_name'),
         )
         delete_on_url(
-            url=url,
-            restheaders=self.restheader,
-            module=self.module,
-            description=description,
+            url=url, restheaders=self.restheader, module=self.module, description=description,
         )
 
     def get_link_representation(self):
         link_representation = {}
         exclusive_arguments = get_all_mutually_exclusive_values(self.module)
         if 'group_name' in list(exclusive_arguments.keys()):
-            link_representation.update(
-                {'group_name': exclusive_arguments['group_name']}
-            )
+            link_representation.update({'group_name': exclusive_arguments['group_name']})
         else:
             link_representation.update({'group_id': exclusive_arguments['group_id']})
         if 'keycloak_username' in list(exclusive_arguments.keys()):
@@ -290,10 +273,7 @@ def run_module():
         argument_spec=argument_spec,
         supports_check_mode=True,
         required_one_of=[['keycloak_username', 'user_id'], ['group_name', 'group_id']],
-        mutually_exclusive=[
-            ['keycloak_username', 'user_id'],
-            ['group_name', 'group_id'],
-        ],
+        mutually_exclusive=[['keycloak_username', 'user_id'], ['group_name', 'group_id'],],
     )
     try:
         connection_header = get_token(
@@ -313,21 +293,25 @@ def run_module():
     result = {}
 
     if not link_user_to_group.are_user_and_group_linked() and state == 'absent':
-        result['msg'] = to_text((
-            'Link between user {given_user_id} and group {given_group_id} does not exist, nothing to do.'
-        ).format(
-            given_group_id=link_user_to_group.given_group,
-            given_user_id=link_user_to_group.given_user,
-        ))
+        result['msg'] = to_text(
+            (
+                'Link between user {given_user_id} and group {given_group_id} does not exist, nothing to do.'
+            ).format(
+                given_group_id=link_user_to_group.given_group,
+                given_user_id=link_user_to_group.given_user,
+            )
+        )
         result['changed'] = False
         result['link_user_to_group'] = {}
     elif link_user_to_group.are_user_and_group_linked() and state == 'present':
-        result['msg'] = to_text((
-            'Link between user {given_user_id} and group {given_group_id} exists, nothing to do.'
-        ).format(
-            given_group_id=link_user_to_group.given_group,
-            given_user_id=link_user_to_group.given_user,
-        ))
+        result['msg'] = to_text(
+            (
+                'Link between user {given_user_id} and group {given_group_id} exists, nothing to do.'
+            ).format(
+                given_group_id=link_user_to_group.given_group,
+                given_user_id=link_user_to_group.given_user,
+            )
+        )
         result['changed'] = False
         result['link_user_to_group'] = link_user_to_group.get_link_representation()
     elif not link_user_to_group.are_user_and_group_linked() and state == 'present':
@@ -338,12 +322,12 @@ def run_module():
             result['changed'] = False
 
         result['link_user_to_group'] = link_user_to_group.get_link_representation()
-        result['msg'] = to_text((
-            'Link between user {given_user_id} and group {given_group_id} created.'
-        ).format(
-            given_group_id=link_user_to_group.given_group,
-            given_user_id=link_user_to_group.given_user,
-        ))
+        result['msg'] = to_text(
+            ('Link between user {given_user_id} and group {given_group_id} created.').format(
+                given_group_id=link_user_to_group.given_group,
+                given_user_id=link_user_to_group.given_user,
+            )
+        )
     elif link_user_to_group.are_user_and_group_linked() and state == 'absent':
         if not module.check_mode:
             result['changed'] = True
@@ -351,12 +335,12 @@ def run_module():
         else:
             result['changed'] = False
         result['link_user_to_group'] = {}
-        result['msg'] = to_text((
-            'Link between user {given_user_id} and group {given_group_id} deleted.'
-        ).format(
-            given_group_id=link_user_to_group.given_group,
-            given_user_id=link_user_to_group.given_user,
-        ))
+        result['msg'] = to_text(
+            ('Link between user {given_user_id} and group {given_group_id} deleted.').format(
+                given_group_id=link_user_to_group.given_group,
+                given_user_id=link_user_to_group.given_user,
+            )
+        )
     module.exit_json(**result)
 
 

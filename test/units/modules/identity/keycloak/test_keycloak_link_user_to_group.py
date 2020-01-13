@@ -21,9 +21,7 @@ from ansible.module_utils.six.moves.urllib.error import HTTPError
 
 def raise_404(url):
     def _raise_404():
-        raise HTTPError(
-            url=url, code=404, msg='does not exist', hdrs='', fp=StringIO('')
-        )
+        raise HTTPError(url=url, code=404, msg='does not exist', hdrs='', fp=StringIO(''))
 
     return _raise_404
 
@@ -56,18 +54,14 @@ def get_response(object_with_future_response, method, get_id_call_count):
     if callable(object_with_future_response):
         return object_with_future_response()
     if isinstance(object_with_future_response, dict):
-        return get_response(
-            object_with_future_response[method], method, get_id_call_count
-        )
+        return get_response(object_with_future_response[method], method, get_id_call_count)
     if isinstance(object_with_future_response, list):
         try:
             call_number = get_id_call_count.__next__()
         except AttributeError:
             # manage python 2 versions.
             call_number = get_id_call_count.next()
-        return get_response(
-            object_with_future_response[call_number], method, get_id_call_count
-        )
+        return get_response(object_with_future_response[call_number], method, get_id_call_count)
     return object_with_future_response
 
 
@@ -106,6 +100,9 @@ def mock_state_absent_no_link_to_do(mocker):
             'http://keycloak.url/auth/admin/realms/master/groups/457-123': create_wrapper(
                 (json.dumps({'id': '457-123', 'name': 'group1'}))
             ),
+            'http://keycloak.url/auth/admin/realms/master/users?username=user1': create_wrapper(
+                json.dumps([{'id': '345-543', 'username': 'user1'},])
+            ),
             'http://keycloak.url/auth/admin/realms/master/users': create_wrapper(
                 json.dumps(
                     [
@@ -140,12 +137,8 @@ def mock_state_absent_no_link_to_do(mocker):
 def test_state_absent_without_link_should_do_nothing(
     monkeypatch, mock_state_absent_no_link_to_do, extra_arguments
 ):
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -186,6 +179,9 @@ def mock_state_present_link_exists(mocker):
             'http://keycloak.url/auth/admin/realms/master/groups/457-123': create_wrapper(
                 (json.dumps({'id': '457-123', 'name': 'group1'}))
             ),
+            'http://keycloak.url/auth/admin/realms/master/users?username=user1': create_wrapper(
+                json.dumps([{'id': '345-543', 'username': 'user1'}, ])
+            ),
             'http://keycloak.url/auth/admin/realms/master/users': create_wrapper(
                 json.dumps(
                     [
@@ -220,12 +216,8 @@ def mock_state_present_link_exists(mocker):
 def test_state_present_with_link_should_do_nothing(
     monkeypatch, mock_state_present_link_exists, extra_arguments
 ):
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -265,6 +257,9 @@ def mock_create_link(mocker):
             'http://keycloak.url/auth/admin/realms/master/groups/457-123': create_wrapper(
                 (json.dumps({'id': '457-123', 'name': 'group1'}))
             ),
+            'http://keycloak.url/auth/admin/realms/master/users?username=user1': create_wrapper(
+                json.dumps([{'id': '345-543', 'username': 'user1'}, ])
+            ),
             'http://keycloak.url/auth/admin/realms/master/users': create_wrapper(
                 json.dumps(
                     [
@@ -300,12 +295,8 @@ def mock_create_link(mocker):
 def test_state_present_should_create_non_existing_link(
     monkeypatch, mock_create_link, extra_arguments
 ):
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -346,6 +337,9 @@ def mock_delete_link(mocker):
             'http://keycloak.url/auth/admin/realms/master/groups/457-123': create_wrapper(
                 (json.dumps({'id': '457-123', 'name': 'group1'}))
             ),
+            'http://keycloak.url/auth/admin/realms/master/users?username=user1': create_wrapper(
+                json.dumps([{'id': '345-543', 'username': 'user1'}, ])
+            ),
             'http://keycloak.url/auth/admin/realms/master/users': create_wrapper(
                 json.dumps(
                     [
@@ -378,15 +372,9 @@ def mock_delete_link(mocker):
     ],
     ids=['names', 'ids'],
 )
-def test_state_absent_should_delete_existing_link(
-    monkeypatch, mock_delete_link, extra_arguments
-):
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json
-    )
+def test_state_absent_should_delete_existing_link(monkeypatch, mock_delete_link, extra_arguments):
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
@@ -426,6 +414,12 @@ def mock_does_not_exist(mocker):
             ),
             'http://keycloak.url/auth/admin/realms/master/groups/457-123': create_wrapper(
                 (json.dumps({'id': '457-123', 'name': 'group1'}))
+            ),
+            'http://keycloak.url/auth/admin/realms/master/users?username=user1': create_wrapper(
+                json.dumps([{'id': '345-543', 'username': 'user1'}])
+            ),
+            'http://keycloak.url/auth/admin/realms/master/users?username=does_not_exist': create_wrapper(
+                json.dumps([])
             ),
             'http://keycloak.url/auth/admin/realms/master/users': create_wrapper(
                 json.dumps(
@@ -467,12 +461,8 @@ def test_group_or_user_does_not_exist_should_fail(
     monkeypatch, mock_does_not_exist, extra_arguments, request
 ):
     test_id = request.node.nodeid.split('[')[1].split(']')[0]
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json
-    )
-    monkeypatch.setattr(
-        keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json
-    )
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'exit_json', exit_json)
+    monkeypatch.setattr(keycloak_link_user_to_group.AnsibleModule, 'fail_json', fail_json)
     arguments = {
         'auth_keycloak_url': 'http://keycloak.url/auth',
         'auth_username': 'test_admin',
