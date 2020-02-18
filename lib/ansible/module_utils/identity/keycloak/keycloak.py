@@ -53,6 +53,39 @@ URL_GROUPS = "{url}/admin/realms/{realm}/groups"
 URL_GROUP = "{url}/admin/realms/{realm}/groups/{groupid}"
 
 
+def get_on_url(url, restheaders, module, description):
+    """Get a keycloak url
+    :param url: the url to get
+    :param restheaders: the keycloak restheader with the token
+    :param module: the module calling this function
+    :param description: the get object description put in the error message
+    if the open_url fails
+    :return: the read json from the url or an empty dictionary if the asked url does not exist.
+    """
+    validate_certs = module.params.get('validate_certs')
+    realm = module.params.get('realm')
+    try:
+        return json.load(open_url(url, method='GET',
+                                  headers=restheaders,
+                                  validate_certs=validate_certs))
+    except HTTPError as e:
+        if e.code == 404:
+            return {}
+        else:
+            module.fail_json(
+                msg=to_text(
+                    'Could not obtain %s for realm %s: %s' % (description, realm, e)
+                )
+            )
+    except ValueError as e:
+        module.fail_json(
+            msg='API returned incorrect JSON when trying to obtain %s for realm %s: %s'
+                % (description, realm, str(e)))
+    except Exception as e:
+        module.fail_json(
+            msg='Could not obtain %s for realm %s: %s' % (description, realm, str(e)))
+
+
 def keycloak_argument_spec():
     """
     Returns argument_spec of options common to keycloak_*-modules
@@ -68,6 +101,39 @@ def keycloak_argument_spec():
         auth_password=dict(type='str', aliases=['password'], required=True, no_log=True),
         validate_certs=dict(type='bool', default=True)
     )
+
+
+def call_with_payload_on_url(url, restheaders, module, description, method, representation=None):
+    """Call on a keycloak url with a payload
+    :param url: the url to modify
+    :param restheaders: the keycloak restheader with the token
+    :param module: the module calling this function
+    :param description: the object description put in the error message
+    if the open_url fails
+    :param method: the url method PUSH or PUT
+    :param representation: the object as a dictionary to create or modify on keycloak
+    """
+
+    validate_certs = module.params.get('validate_certs')
+    realm = module.params.get('realm')
+    method_verb = {
+        'PUT': 'modify',
+        'POST': 'create',
+        'DELETE': 'delete'
+    }
+    if representation:
+        pushed_data = json.dumps(representation)
+    else:
+        pushed_data = {}
+    try:
+        return open_url(url, method=method,
+                        headers=restheaders,
+                        data=pushed_data,
+                        validate_certs=validate_certs)
+    except HTTPError as e:
+        module.fail_json(
+            msg=to_text("Could not %s %s in realm %s: %s" % (
+                method_verb[method], description, realm, str(e))))
 
 
 def camel(words):
