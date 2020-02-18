@@ -67,39 +67,6 @@ URL_REALM = "{url}/admin/realms/{realm}"
 URL_REALMS = "{url}/admin/realms"
 
 
-def get_on_url(url, restheaders, module, description):
-    """Get a keycloak url
-    :param url: the url to get
-    :param restheaders: the keycloak restheader with the token
-    :param module: the module calling this function
-    :param description: the get object description put in the error message
-    if the open_url fails
-    :return: the read json from the url or an empty dictionary if the asked url does not exist.
-    """
-    validate_certs = module.params.get('validate_certs')
-    realm = module.params.get('realm')
-    try:
-        return json.load(open_url(url, method='GET',
-                                  headers=restheaders,
-                                  validate_certs=validate_certs))
-    except HTTPError as e:
-        if e.code == 404:
-            return {}
-        else:
-            module.fail_json(
-                msg=to_text(
-                    'Could not obtain %s for realm %s: %s' % (description, realm, e)
-                )
-            )
-    except ValueError as e:
-        module.fail_json(
-            msg='API returned incorrect JSON when trying to obtain %s for realm %s: %s'
-                % (description, realm, str(e)))
-    except Exception as e:
-        module.fail_json(
-            msg='Could not obtain %s for realm %s: %s' % (description, realm, str(e)))
-
-
 def put_on_url(url, restheaders, module, description, representation=None):
     """Put on a keycloak url
 
@@ -175,6 +142,39 @@ def delete_on_url(url, restheaders, module, description):
     except HTTPError as e:
         module.fail_json(
             msg="Could not delete %s in realm %s: %s" % (description, realm, str(e)))
+
+
+def get_on_url(url, restheaders, module, description):
+    """Get a keycloak url
+    :param url: the url to get
+    :param restheaders: the keycloak restheader with the token
+    :param module: the module calling this function
+    :param description: the get object description put in the error message
+    if the open_url fails
+    :return: the read json from the url or an empty dictionary if the asked url does not exist.
+    """
+    validate_certs = module.params.get('validate_certs')
+    realm = module.params.get('realm')
+    try:
+        return json.load(open_url(url, method='GET',
+                                  headers=restheaders,
+                                  validate_certs=validate_certs))
+    except HTTPError as e:
+        if e.code == 404:
+            return {}
+        else:
+            module.fail_json(
+                msg=to_text(
+                    'Could not obtain %s for realm %s: %s' % (description, realm, e)
+                )
+            )
+    except ValueError as e:
+        module.fail_json(
+            msg='API returned incorrect JSON when trying to obtain %s for realm %s: %s'
+                % (description, realm, str(e)))
+    except Exception as e:
+        module.fail_json(
+            msg='Could not obtain %s for realm %s: %s' % (description, realm, str(e)))
 
 
 def keycloak_argument_spec():
