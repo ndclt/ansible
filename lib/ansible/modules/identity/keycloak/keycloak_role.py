@@ -11,11 +11,7 @@ from ansible.module_utils.common.dict_transformations import recursive_diff
 
 __metaclass__ = type
 
-ANSIBLE_METADATA = {
-    'metadata_version': '1.1',
-    'status': ['preview'],
-    'supported_by': 'community'
-}
+ANSIBLE_METADATA = {'metadata_version': '1.1', 'status': ['preview'], 'supported_by': 'community'}
 
 DOCUMENTATION = r'''
 ---
@@ -176,7 +172,13 @@ end_state:
 '''
 
 from ansible.module_utils._text import to_text
-from ansible.module_utils.keycloak import KeycloakAPI, camel, keycloak_argument_spec
+from ansible.module_utils.identity.keycloak.keycloak import (
+    KeycloakAPI,
+    camel,
+    keycloak_argument_spec,
+    get_token,
+    KeycloakError,
+)
 from ansible.module_utils.basic import AnsibleModule
 
 AUTHORIZED_ATTRIBUTE_VALUE_TYPE = (str, int, float, bool)
@@ -199,13 +201,12 @@ def run_module():
     # The id of the role is unique in keycloak and if it is given the
     # client_id is not used. In order to avoid confusion, I set a mutual
     # exclusion.
-    module = AnsibleModule(argument_spec=argument_spec,
-                           supports_check_mode=True,
-                           required_one_of=([['name', 'id']]),
-                           mutually_exclusive=([
-                               ['name', 'id'],
-                               ['id', 'client_id']]),
-                           )
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        supports_check_mode=True,
+        required_one_of=([['name', 'id']]),
+        mutually_exclusive=([['name', 'id'], ['id', 'client_id']]),
+    )
     realm = module.params.get('realm')
     state = module.params.get('state')
     given_role_id = {'name': module.params.get('name')}
@@ -215,11 +216,26 @@ def run_module():
     client_id = module.params.get('client_id')
 
     if not attributes_format_is_correct(module.params.get('attributes')):
-        module.fail_json(msg=(
-            'Attributes are not in the correct format. Should be a dictionary with '
-            'one value per key as string, integer and boolean'))
+        module.fail_json(
+            msg=(
+                'Attributes are not in the correct format. Should be a dictionary with '
+                'one value per key as string, integer and boolean'
+            )
+        )
 
-    kc = KeycloakAPI(module)
+    try:
+        connection_header = get_token(
+            base_url=module.params.get('auth_keycloak_url'),
+            validate_certs=module.params.get('validate_certs'),
+            auth_realm=module.params.get('auth_realm'),
+            client_id=module.params.get('auth_client_id'),
+            auth_username=module.params.get('auth_username'),
+            auth_password=module.params.get('auth_password'),
+            client_secret=module.params.get('auth_client_secret'),
+        )
+    except KeycloakError as e:
+        module.fail_json(msg=str(e))
+    kc = KeycloakAPI(module, connection_header)
     before_role, client_uuid = get_initial_role(given_role_id, kc, realm, client_id)
     result = create_result(before_role, module)
 
@@ -283,8 +299,7 @@ def get_initial_role(given_role_id, kc, realm, client_id):
 
 def create_result(before_role, module):
     changeset = create_changeset(module)
-    result = dict(changed=False, msg='', diff={}, proposed={}, existing={},
-                  end_state={})
+    result = dict(changed=False, msg='', diff={}, proposed={}, existing={}, end_state={})
     result['proposed'] = changeset
     result['existing'] = before_role
     return result
@@ -292,9 +307,11 @@ def create_result(before_role, module):
 
 def create_changeset(module):
     role_params = [
-        x for x in module.params
-        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm'] and
-        module.params.get(x) is not None]
+        x
+        for x in module.params
+        if x not in list(keycloak_argument_spec().keys()) + ['state', 'realm']
+        and module.params.get(x) is not None
+    ]
     changeset = dict()
 
     for role_param in role_params:
@@ -318,22 +335,28 @@ def do_nothing_and_exit(kc, result, realm, given_role_id, client_id, client_uuid
     if module._diff:
         result['diff'] = dict(before=result['existing'], after=result['existing'])
     if result['existing']:
-        result['msg'] = (
-            'Role %s in client %s of realm %s is not modified, doing nothing.' % (
-            to_text(message_role_id), to_text(client_id), to_text(realm)))
+        result['msg'] = 'Role %s in client %s of realm %s is not modified, doing nothing.' % (
+            to_text(message_role_id),
+            to_text(client_id),
+            to_text(realm),
+        )
     else:
         if client_id:
             if not client_uuid:
                 result['msg'] = (
                     'Client %s does not exist in %s, cannot found role %s in it, doing nothing.'
-                    % (to_text(client_id), realm, to_text(message_role_id)))
+                    % (to_text(client_id), realm, to_text(message_role_id))
+                )
             else:
                 result['msg'] = (
                     'Role %s does not exist in client %s of realm %s, doing nothing.'
-                    % (to_text(message_role_id), to_text(client_id), to_text(realm)))
+                    % (to_text(message_role_id), to_text(client_id), to_text(realm))
+                )
         else:
-            result['msg'] = ('Role %s does not exist in realm %s, doing nothing.'
-                             % (to_text(message_role_id), to_text(realm)))
+            result['msg'] = 'Role %s does not exist in realm %s, doing nothing.' % (
+                to_text(message_role_id),
+                to_text(realm),
+            )
     module.exit_json(**result)
 
 
@@ -347,14 +370,14 @@ def create_role(kc, result, realm, given_role_id, client_id):
     result['changed'] = True
 
     if module._diff:
-        result['diff'] = dict(before='',
-                              after=role_to_create)
+        result['diff'] = dict(before='', after=role_to_create)
     if module.check_mode:
         module.exit_json(**result)
 
     if 'attributes' in role_to_create:
         role_to_create.update(
-            {'attributes': put_attributes_values_in_list(role_to_create['attributes'])})
+            {'attributes': put_attributes_values_in_list(role_to_create['attributes'])}
+        )
 
     response = kc.create_role(role_to_create, realm=realm, client_uuid=client_uuid)
     if 'attributes' in role_to_create:
@@ -378,10 +401,8 @@ def updating_role(kc, result, realm, given_role_id, client_uuid):
     if module.check_mode:
         # We can only compare the current role with the proposed updates we have
         if module._diff:
-            result['diff'] = dict(
-                before=before_role,
-                after=updated_role)
-        result['changed'] = (before_role != updated_role)
+            result['diff'] = dict(before=before_role, after=updated_role)
+        result['changed'] = before_role != updated_role
         module.exit_json(**result)
 
     # put the current name in the change set in order to avoid a reset of the
@@ -390,17 +411,14 @@ def updating_role(kc, result, realm, given_role_id, client_uuid):
     changeset.update({'name': before_role['name']})
 
     if 'attributes' in changeset:
-        changeset.update(
-            {'attributes': put_attributes_values_in_list(changeset['attributes'])})
+        changeset.update({'attributes': put_attributes_values_in_list(changeset['attributes'])})
     kc.update_role(given_role_id, changeset, realm=realm, client_uuid=client_uuid)
     after_role = kc.get_role(given_role_id, realm=realm, client_uuid=client_uuid)
     if before_role == after_role:
         result['changed'] = False
 
     if module._diff:
-        result['diff'] = dict(
-            before=before_role,
-            after=after_role)
+        result['diff'] = dict(before=before_role, after=after_role)
 
     result['end_state'] = after_role
     result['msg'] = 'Role %s has been updated.' % to_text(list(given_role_id.values())[0])

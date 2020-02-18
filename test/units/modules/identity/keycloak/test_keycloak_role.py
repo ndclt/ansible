@@ -126,7 +126,7 @@ def mock_absent_role_url(mocker):
 
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), absent_role_url),
         autospec=True
     )
@@ -196,7 +196,7 @@ def mock_already_here_role_in_client_url(mocker):
         )))
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), already_here_role_url),
         autospec=True
     )
@@ -247,7 +247,7 @@ def mock_delete_role_urls(mocker):
         }
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), delete_role_urls),
         autospec=True
     )
@@ -331,7 +331,7 @@ def mock_create_role_urls(mocker):
     })
 
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), create_role_urls),
         autospec=True
     )
@@ -396,7 +396,7 @@ def mock_update_role_urls(mocker):
         }
     })
     return mocker.patch(
-        'ansible.module_utils.keycloak.open_url',
+        'ansible.module_utils.identity.keycloak.keycloak.open_url',
         side_effect=build_mocked_request(count(), update_role_urls),
         autospec=True
     )
